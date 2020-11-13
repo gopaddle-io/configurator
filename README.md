@@ -8,7 +8,8 @@ When used with kustomize,
   - Automatically triggers a rolling update on deployments referring to a configMap version
   - Periodically purges unused ConfigMap versions
 
-[![Watch the video](https://gopaddle-marketing.s3-ap-southeast-2.amazonaws.com/configurator.png)](https://youtu.be/cLi952bntvw)
+[<img src="https://gopaddle-marketing.s3-ap-southeast-2.amazonaws.com/configurator-thumbnail.png" width="80%">](https://youtu.be/cLi952bntvw)
+
 
 # Supported Versions
 
