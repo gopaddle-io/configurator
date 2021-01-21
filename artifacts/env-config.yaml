@@ -1,0 +1,10 @@
+apiVersion: "configurator.gopaddle.io/v1alpha1"
+kind: Configurator
+metadata:
+ name: testenvconf
+ namespace: test
+spec:
+  configMapName: envconfigtest
+  data:
+    enemies: aliens
+    foo: BAR
