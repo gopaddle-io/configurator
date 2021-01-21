@@ -2,13 +2,14 @@ package watcher
 
 import "github.com/robfig/cron"
 
-type Config struct {
-	Labels []ConfigLabel `json:"Labels"`
+type Watcher struct {
+	Labels []WatcherLabel `json:"Labels"`
 }
 
-type ConfigLabel struct {
+type WatcherLabel struct {
 	NameSpace string `json:"nameSpace"`
 	ConfigMap string `json:"configMap"`
+	Secret    string `json:"secret"`
 }
 
 type CornJob struct {
