@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: configurator-controller
+  namespace: configurator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      configurator: configurator-controller
+  template:
+    metadata:
+      labels:
+        configurator: configurator-controller
+        app: configurator
+    spec:
+      containers:
+      - image: gopaddle/configurator:latest
+        imagePullPolicy: Always
+        name: configurator
+      serviceAccountName: configurator-controller

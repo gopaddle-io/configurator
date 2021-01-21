@@ -16,7 +16,8 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
-	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/rest"
+	"k8s.io/klog"
 )
 
 const (
@@ -25,14 +26,18 @@ const (
 
 func StartWatcher(label WatcherLabel) {
 	//creating clientset
-	args := os.Args[1:]
-	if len(args) < 1 {
-		log.Panicln("Kubernetes Client Config is not provided,\n\t")
-	}
-	cfg, err := clientcmd.BuildConfigFromFlags("", args[0])
+	// args := os.Args[1:]
+	// if len(args) < 1 {
+	// 	log.Panicln("Kubernetes Client Config is not provided,\n\t")
+	// }
+	// cfg, err := clientcmd.BuildConfigFromFlags("", args[0])
+	// if err != nil {
+	// 	log.Fatalf("Error building kubeconfig: %s", err.Error(), time.Now().UTC())
+	// 	return
+	// }
+	cfg, err := rest.InClusterConfig()
 	if err != nil {
-		log.Fatalf("Error building kubeconfig: %s", err.Error(), time.Now().UTC())
-		return
+		klog.Fatalf("Error building kubeconfig: %s", err.Error())
 	}
 	clientSet, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
@@ -403,14 +408,18 @@ func SplitStr(str string) string {
 //purge unused configmaps and secret
 func PurgeConfigAndSecret() {
 	log.Println("purge unused configmap and secret started", time.Now().UTC())
-	args := os.Args[1:]
-	if len(args) < 1 {
-		log.Panicln("Kubernetes Client Configuration is not provided,\n\t")
-	}
-	cfg, err := clientcmd.BuildConfigFromFlags("", args[0])
+	// args := os.Args[1:]
+	// if len(args) < 1 {
+	// 	log.Panicln("Kubernetes Client Configuration is not provided,\n\t")
+	// }
+	cfg, err := rest.InClusterConfig()
 	if err != nil {
-		log.Fatalf("Error building kubeconfig: %s", err.Error())
+		klog.Fatalf("Error building kubeconfig: %s", err.Error())
 	}
+	// cfg, err := clientcmd.BuildConfigFromFlags("", args[0])
+	// if err != nil {
+	// 	log.Fatalf("Error building kubeconfig: %s", err.Error())
+	// }
 	clientSet, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
 		log.Fatalf("Error building kubernetes clientset: %s", err.Error())

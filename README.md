@@ -2,60 +2,38 @@
 
 Configurator is a sync service that keeps Kubernetes deployments in sync with the ConfigMap updates. 
 
-
-When used with kustomize, 
-  - Resource postfix as way to version control ConfigMaps
-  - Automatically triggers a rolling update on deployments referring to a configMap version
-  - Periodically purges unused ConfigMap versions
-
 [<img src="https://gopaddle-marketing.s3-ap-southeast-2.amazonaws.com/addo-configurator.png" width="80%">](https://youtu.be/sTX8RASHMXQ?start=2:30:30)
 
 # Supported Versions
 
-  - K8s 1.16
+  - K8s 1.16+
 
-### Dependencies
-Install kustomize in the Kuberentes client environment from where configMap creation needs to be triggered.
-  - [kustomize](https://kustomize.io/)
-
-### Building Configurator
-Build the source code
+### Building and Deploying Configurator
+Build the source code and the docker image. Push the image to registry and deploy configurator in cluster
 ```sh
-dep ensure
-go build main.go
+make clean build deploy
+```
+### Removing Configurator
+Remove the configurator deployment from cluster and delete local binary and docker image 
+```sh
+make remove clean 
 ```
 
 ### How to use ?
-Once configurator is compiled, start the service.
+Once configurator is deployed in cluster, start creating customConfigMaps. Example customConfigMaps are available under artifacts/examples folder.
+
+Create customConfigMap. This will create a configMap with a postfix
+```sh
+kubectl apply -f example-customConfigMap.yaml
+```
+List the configMap and make a note of the postfix for the first time.
 
 ```sh
-./main ~/.kube/config
-curl -X POST -d '{"labels":[{"nameSpace":"default","configMap":"my-java"}]}' http://localhost:8050/api/watcher
+kubectl get configMap -n test
+NAME               DATA   AGE
+testconfig-srseq   1      9s
 ```
-
-Use kustomize to create or update configMaps. Say kustmization.yaml file must look like this. Note that the labels under option section must contain name=<configmapname>
-
-```sh
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-# These labels are added to all configmaps and secrets.
-configMapGenerator:
-- name: my-java
-  behavior: create
-  literals:
-  - JAVA_TOOL_OPTIONS=-agentlib:hprof
-  - JAVA_TEST=javatest
-  - JAVA_HOME=/home/vino/addo
-  options:
-    disableNameSuffixHash: false
-    labels:
-      name: my-java
-```
-Build the configMap using the kustomization.yaml file.
-
-```sh
-kustomize build . | kubectl apply -f -
-```
+Here  "srseq" is the postfix.
 
 Create deployment with the newly created configMap along with the postfix. Please note the metadata label must contain the config name and the config postfix that was created initially. say <configname>=<postfix>. Under the VolumeMounts section use the complete name of the configMap along with the postfix.
 
@@ -65,7 +43,7 @@ kind: Deployment
 metadata:
   name: busybox-deployment
   labels:
-    my-java: d6f8m44fmg
+   testconfig: srseq
     app: busybox
 spec:
   replicas: 1
@@ -91,14 +69,11 @@ spec:
       volumes:
       - name: test-config
         configMap:
-          name: my-java-d6f8m44fmg
+          name: testconfig-srseq
 ```
-Whenever a new configMap is created through kustomize, Configurator will automatically sync up the related deployments automatically.
+Whenever the customConfigMap is updated, Configurator will create a configMap with a new postfix and will automatically sync up the related deployments with the newly created configMap.
 
-### Todos
- - Sync Secretes with Deployments
- - Handle Stateful Sets
- - Move Configurator to Operator Framework
+Same functionality applies for secrets as well.
 
 License
 ----
