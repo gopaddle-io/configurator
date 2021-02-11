@@ -106,6 +106,12 @@ func (c *Controller) secretSyncHandler(key string) error {
 		//checking secret content is equal or not
 		if reflect.DeepEqual(secret.Data, data) == false || secret.Type != customSecret.Spec.Type || reflect.DeepEqual(secret.ObjectMeta.Annotations, customSecret.Spec.SecretAnnotations) == false {
 			klog.V(4).Infof("CustomSecret %s  Secret edited", name)
+			if reflect.DeepEqual(secret.ObjectMeta.Annotations, customSecret.Spec.SecretAnnotations) == false && reflect.DeepEqual(secret.Data, data) {
+				if len(secret.ObjectMeta.Annotations) == 0 && len(customSecret.Spec.SecretAnnotations) == 0 {
+					fmt.Println("secret annotation and custom secret annotation is empty")
+					return nil
+				}
+			}
 			_, err = c.kubeclientset.CoreV1().Secrets(customSecret.Namespace).Create(context.TODO(), newSecret(customSecret), metav1.CreateOptions{})
 			if err == nil {
 				//removing configmap latest label from previous configmap

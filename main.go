@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"time"
 
@@ -9,12 +8,14 @@ import (
 	"github.com/gopaddle-io/configurator/pkg/signals"
 
 	"github.com/gopaddle-io/configurator/watcher"
+	//"k8s.io/client-go/tools/clientcmd"
 
 	clientset "github.com/gopaddle-io/configurator/pkg/client/clientset/versioned"
 	informers "github.com/gopaddle-io/configurator/pkg/client/informers/externalversions"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+
 	"k8s.io/client-go/rest"
 	"k8s.io/klog"
 )
@@ -24,8 +25,8 @@ func main() {
 	// if len(args) < 1 {
 	// 	log.Panicln("Kubernetes Client Config location is not provided,\n\t")
 	// }
-	klog.InitFlags(nil)
-	flag.Parse()
+	// klog.InitFlags(nil)
+	// flag.Parse()
 
 	cfg, err := rest.InClusterConfig()
 	if err != nil {

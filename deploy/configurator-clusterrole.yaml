@@ -73,3 +73,13 @@ rules:
     - patch
     - update
     - watch
+  - apiGroups:
+    - apps
+    - extensions
+    resources:
+    - replicasets
+    verbs:
+    - get
+    - list
+    - update
+    - watch

@@ -165,12 +165,19 @@ func (c *Controller) enqueueConfigurator(obj interface{}) {
 		return
 	}
 	var ownerRef metav1.TypeMeta
+	var customConfigMap customConfigMapv1alpha1.CustomConfigMap
 	val, _ := json.Marshal(obj)
 	json.Unmarshal(val, &ownerRef)
+	json.Unmarshal(val, &customConfigMap)
 	if ownerRef.Kind == "" {
 		annotation := obj.(metav1.Object).GetAnnotations()
 		json.Unmarshal([]byte(annotation["kubectl.kubernetes.io/last-applied-configuration"]), &ownerRef)
 
+	}
+	if customConfigMap.Spec.ConfigMapName != "" {
+		ownerRef.Kind = "CustomConfigMap"
+	} else {
+		ownerRef.Kind = "CustomSecret"
 	}
 	event := Event{
 		Kind:             ownerRef.Kind,
