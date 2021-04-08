@@ -390,26 +390,29 @@ func (c *Controller) syncHandler(key string) error {
 	configMaps, err := c.configmapsLister.ConfigMaps(customConfigmap.Namespace).List(selector)
 	// // If the resource doesn't exist, we'll create it
 	if len(configMaps) == 0 {
-		_, er := c.kubeclientset.CoreV1().ConfigMaps(customConfigmap.Namespace).Create(context.TODO(), newConfigmap(customConfigmap), metav1.CreateOptions{})
+		cm, er := c.kubeclientset.CoreV1().ConfigMaps(customConfigmap.Namespace).Create(context.TODO(), newConfigmap(customConfigmap), metav1.CreateOptions{})
 		// If an error occurs during Get/Create, we'll requeue the item so we can
 		// attempt processing again later. This could have been caused by a
 		// temporary network failure, or any other transient reason.
 		if er != nil {
+			c.recorder.Eventf(customConfigmap, corev1.EventTypeWarning, "FailedCreateConfigMap", "Error creating ConfigMap: %v", err)
 			return er
 		}
+		c.recorder.Eventf(customConfigmap, corev1.EventTypeNormal, "ConfigMap", "Created ConfigMap: %v", cm.Name)
 		//start watcher for configmap to listen deployment and statefulset
 		configlabel := watcher.WatcherLabel{}
 		configlabel.NameSpace = customConfigmap.Namespace
 		configlabel.ConfigMap = customConfigmap.Spec.ConfigMapName
-		go watcher.StartWatcher(configlabel)
+		go watcher.StartWatcher(configlabel, cm.Name, "")
 		//store label in file
 		arrConfiglabel := watcher.Watcher{}
 		arrConfiglabel.Labels = append(arrConfiglabel.Labels, configlabel)
-		err := watcher.StoreLabel(arrConfiglabel)
+		err = watcher.StoreLabel(arrConfiglabel)
 		if err != nil {
 			return err
 		}
 	}
+
 	// if the configmap list not equal to empty than compare the ConfigMap with customConfigMap
 	// if there any changes we create a new configmap and it will update corresponding deployment and statefulset
 	if len(configMaps) != 0 {
@@ -423,7 +426,7 @@ func (c *Controller) syncHandler(key string) error {
 		// // should update the configMap resource.
 		if reflect.DeepEqual(configMap.Data, customConfigmap.Spec.Data) == false || reflect.DeepEqual(configMap.BinaryData, customConfigmap.Spec.BinaryData) == false {
 			klog.V(4).Infof("CustomConfigMap %s  configmap edited", name)
-			_, err = c.kubeclientset.CoreV1().ConfigMaps(customConfigmap.Namespace).Create(context.TODO(), newConfigmap(customConfigmap), metav1.CreateOptions{})
+			cm, err := c.kubeclientset.CoreV1().ConfigMaps(customConfigmap.Namespace).Create(context.TODO(), newConfigmap(customConfigmap), metav1.CreateOptions{})
 			if err == nil {
 				//removing configmap latest label from previous configmap
 				label := make(map[string]string)
@@ -434,6 +437,21 @@ func (c *Controller) syncHandler(key string) error {
 				if err != nil {
 					return err
 				}
+				c.recorder.Eventf(customConfigmap, corev1.EventTypeNormal, "ConfigMap", "Created ConfigMap: %v", cm.Name)
+			} else {
+				c.recorder.Eventf(customConfigmap, corev1.EventTypeWarning, "FailedCreateConfigMap", "Error creating ConfigMap: %v", err)
+			}
+			//start watcher for configmap to listen deployment and statefulset
+			configlabel := watcher.WatcherLabel{}
+			configlabel.NameSpace = customConfigmap.Namespace
+			configlabel.ConfigMap = customConfigmap.Spec.ConfigMapName
+			go watcher.StartWatcher(configlabel, configMap.Name, cm.Name)
+			//store label in file
+			arrConfiglabel := watcher.Watcher{}
+			arrConfiglabel.Labels = append(arrConfiglabel.Labels, configlabel)
+			err = watcher.StoreLabel(arrConfiglabel)
+			if err != nil {
+				return err
 			}
 		}
 
@@ -445,7 +463,7 @@ func (c *Controller) syncHandler(key string) error {
 		}
 	}
 
-	c.recorder.Event(customConfigmap, corev1.EventTypeNormal, SuccessSynced, MessageResourceSynced)
+	//c.recorder.Event(customConfigmap, corev1.EventTypeNormal, SuccessSynced, MessageResourceSynced)
 	return nil
 }
 

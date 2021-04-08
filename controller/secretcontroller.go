@@ -59,26 +59,29 @@ func (c *Controller) secretSyncHandler(key string) error {
 	secrets, err := c.secretsLister.Secrets(customSecret.Namespace).List(selector)
 	// If the resource doesn't exist, we'll create it
 	if len(secrets) == 0 {
-		_, er := c.kubeclientset.CoreV1().Secrets(customSecret.Namespace).Create(context.TODO(), newSecret(customSecret), metav1.CreateOptions{})
+		s, er := c.kubeclientset.CoreV1().Secrets(customSecret.Namespace).Create(context.TODO(), newSecret(customSecret), metav1.CreateOptions{})
 		// If an error occurs during Get/Create, we'll requeue the item so we can
 		// attempt processing again later. This could have been caused by a
 		// temporary network failure, or any other transient reason.
 		if er != nil {
+			c.recorder.Eventf(customSecret, corev1.EventTypeWarning, "FailedCreateSecret", "Error creating Secret: %v", err)
 			return er
 		}
-		//start watcher for configmap to listen deployment and statefulset
+		c.recorder.Eventf(customSecret, corev1.EventTypeNormal, "Secret", "Created Secret: %v", s.Name)
+
 		secretlabel := watcher.WatcherLabel{}
 		secretlabel.NameSpace = customSecret.Namespace
 		secretlabel.Secret = customSecret.Spec.SecretName
-		go watcher.StartWatcher(secretlabel)
+		go watcher.StartWatcher(secretlabel, s.Name, "")
 		//store label in file
 		arrSecretlabel := watcher.Watcher{}
 		arrSecretlabel.Labels = append(arrSecretlabel.Labels, secretlabel)
-		err := watcher.StoreLabel(arrSecretlabel)
+		err = watcher.StoreLabel(arrSecretlabel)
 		if err != nil {
 			return err
 		}
 	}
+
 	// if the secret list not equal to empty than compare the secret with custom secret
 	// if there any changes we create a new secret and it will update corresponding deployment and statefulset
 	if len(secrets) != 0 {
@@ -111,8 +114,13 @@ func (c *Controller) secretSyncHandler(key string) error {
 					fmt.Println("secret annotation and custom secret annotation is empty")
 					return nil
 				}
+			} else if reflect.DeepEqual(secret.Data, data) == false {
+				if len(secret.Data) == 0 && len(data) == 0 {
+					fmt.Println("secret data and customsecret data is empty")
+					return nil
+				}
 			}
-			_, err = c.kubeclientset.CoreV1().Secrets(customSecret.Namespace).Create(context.TODO(), newSecret(customSecret), metav1.CreateOptions{})
+			s, err := c.kubeclientset.CoreV1().Secrets(customSecret.Namespace).Create(context.TODO(), newSecret(customSecret), metav1.CreateOptions{})
 			if err == nil {
 				//removing configmap latest label from previous configmap
 				label := make(map[string]string)
@@ -123,6 +131,20 @@ func (c *Controller) secretSyncHandler(key string) error {
 				if err != nil {
 					return err
 				}
+				c.recorder.Eventf(customSecret, corev1.EventTypeNormal, "Secret", "Created Secret: %v", s.Name)
+			} else {
+				c.recorder.Eventf(customSecret, corev1.EventTypeWarning, "FailedCreateSecret", "Error creating Secret: %v", err)
+			}
+			secretlabel := watcher.WatcherLabel{}
+			secretlabel.NameSpace = customSecret.Namespace
+			secretlabel.Secret = customSecret.Spec.SecretName
+			go watcher.StartWatcher(secretlabel, secret.Name, s.Name)
+			//store label in file
+			arrSecretlabel := watcher.Watcher{}
+			arrSecretlabel.Labels = append(arrSecretlabel.Labels, secretlabel)
+			err = watcher.StoreLabel(arrSecretlabel)
+			if err != nil {
+				return err
 			}
 		}
 
@@ -134,7 +156,7 @@ func (c *Controller) secretSyncHandler(key string) error {
 		}
 	}
 
-	c.recorder.Event(customSecret, corev1.EventTypeNormal, SuccessSynced, MessageResourceSynced)
+	//c.recorder.Event(customSecret, corev1.EventTypeNormal, SuccessSynced, MessageResourceSynced)
 	return nil
 }
 

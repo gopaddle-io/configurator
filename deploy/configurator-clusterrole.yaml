@@ -83,3 +83,25 @@ rules:
     - list
     - update
     - watch
+  - apiGroups:
+    - apps
+    resources:
+    - controllerrevisions
+    verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
+  - apiGroups:
+    - ""
+    - events.k8s.io
+    resources:
+    - events
+    verbs:
+    - create
+    - patch
+    - update
+

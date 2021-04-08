@@ -13,7 +13,6 @@ import (
 	"github.com/robfig/cron"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
@@ -27,7 +26,7 @@ const (
 	path = "labelconfig/"
 )
 
-func StartWatcher(label WatcherLabel) {
+func StartWatcher(label WatcherLabel, prevConfig, newConfig string) {
 	//creating clientset
 	// args := os.Args[1:]
 	// if len(args) < 1 {
@@ -58,315 +57,323 @@ func StartWatcher(label WatcherLabel) {
 		secretLabel := "name=" + label.Secret
 		listOpts.LabelSelector = secretLabel
 	}
-	var watch watch.Interface
-	var er error
-	if label.ConfigMap != "" {
-		for {
-			watch, er = clientSet.CoreV1().ConfigMaps(label.NameSpace).Watch(context.TODO(), listOpts)
-			if er != nil {
-				log.Println("failed on watching configmap label '%s'", label.ConfigMap)
-				log.Println("error in wtach --->", er.Error())
-				continue
-			} else {
-				break
-			}
-		}
-	} else if label.Secret != "" {
-		for {
-			watch, er = clientSet.CoreV1().Secrets(label.NameSpace).Watch(context.TODO(), listOpts)
-			if er != nil {
-				log.Println("failed on watching configmap label '%s'", label.Secret)
-				log.Println("error in wtach --->", er.Error())
-				continue
-			} else {
-				break
-			}
-		}
-	}
-	previousName := ""
-	previousCreatedTime := ""
-	layout := "2006-01-02T15:04:05Z"
-	for {
-		result := <-watch.ResultChan()
-		if result.Type == "ADDED" {
-			data, errs := json.Marshal(result.Object)
-			if errs != nil {
-				log.Println("Failed to marshal", errs, time.Now().UTC())
-			}
-			var f interface{}
-			if err := json.Unmarshal(data, &f); err != nil {
-				log.Println("Failed to unmarshal", err, time.Now().UTC())
-			}
-			object := f.(map[string]interface{})
-			//geting metadata
-			metadata := object["metadata"].(map[string]interface{})
-			name := metadata["name"].(string)
 
-			if previousName == "" {
-				previousName = name
-				previousCreatedTime = metadata["creationTimestamp"].(string)
+	//var watch watch.Interface
+	//var er error
+	// if label.ConfigMap != "" {
+	// 	for {
+	// 		watch, er = clientSet.CoreV1().ConfigMaps(label.NameSpace).Watch(context.TODO(), listOpts)
+	// 		if er != nil {
+	// 			log.Println("failed on watching configmap label '%s'", label.ConfigMap)
+	// 			log.Println("error in wtach --->", er.Error())
+	// 			continue
+	// 		} else {
+	// 			break
+	// 		}
+	// 	}
+	// } else if label.Secret != "" {
+	// 	for {
+	// 		watch, er = clientSet.CoreV1().Secrets(label.NameSpace).Watch(context.TODO(), listOpts)
+	// 		if er != nil {
+	// 			log.Println("failed on watching configmap label '%s'", label.Secret)
+	// 			log.Println("error in wtach --->", er.Error())
+	// 			continue
+	// 		} else {
+	// 			break
+	// 		}
+	// 	}
+	// }
+
+	previousName := prevConfig
+	name := newConfig
+	// previousCreatedTime := ""
+	// layout := "2006-01-02T15:04:05Z"
+	// for {
+	//result := <-watch.ResultChan()
+	// if result.Type == "ADDED" {
+	// 	data, errs := json.Marshal(result.Object)
+	// 	if errs != nil {
+	// 		log.Println("Failed to marshal", errs, time.Now().UTC())
+	// 	}
+	// 	var f interface{}
+	// 	if err := json.Unmarshal(data, &f); err != nil {
+	// 		log.Println("Failed to unmarshal", err, time.Now().UTC())
+	// 	}
+	// 	object := f.(map[string]interface{})
+	// 	//geting metadata
+	// 	metadata := object["metadata"].(map[string]interface{})
+	// 	name := metadata["name"].(string)
+
+	// 	if previousName == "" {
+	// 		previousName = name
+	// 		previousCreatedTime = metadata["creationTimestamp"].(string)
+	// 	}
+	// 	pretime, err := time.Parse(layout, previousCreatedTime)
+	// 	if err != nil {
+	// 		log.Println("failed on parse time", err, time.Now().UTC())
+	// 	}
+	// 	currenCreatedTime, er := time.Parse(layout, metadata["creationTimestamp"].(string))
+	// 	if er != nil {
+	// 		log.Println("failed on parse time", er, time.Now().UTC())
+	// 	}
+	// 	if pretime.Equal(currenCreatedTime) {
+	// 		continue
+	// 	} else if currenCreatedTime.After(pretime) {
+	// 		previousCreatedTime = metadata["creationTimestamp"].(string)
+	labelStr := SplitStr(previousName)
+	var opts metav1.ListOptions
+	opts.LabelSelector = labelStr
+	//deployment update
+	deploylist, er := clientSet.AppsV1().Deployments(label.NameSpace).List(context.TODO(), opts)
+	if er != nil {
+		log.Println("Failed on getting deployment list based on label", er, time.Now().UTC())
+	}
+	if len(deploylist.Items) != 0 {
+		for _, deployment := range deploylist.Items {
+			//volume configmap
+			volumes := deployment.Spec.Template.Spec.Volumes
+			for index, volume := range volumes {
+				if label.ConfigMap != "" {
+					if volume.ConfigMap != nil {
+						if volume.ConfigMap.Name == previousName {
+							volume.ConfigMap.Name = name
+							volumes[index] = volume
+							deployment.Spec.Template.Spec.Volumes = volumes
+							newLabel := SplitStr(name)
+							s := strings.Split(newLabel, "=")
+							deployment.Labels[s[0]] = s[1]
+							annotations := make(map[string]string)
+							annotations["kubernetes.io/change-cause"] = "configmap updated to " + name
+							deployment.Annotations = annotations
+						}
+					}
+				} else if label.Secret != "" {
+					if volume.Secret != nil {
+						if volume.Secret.SecretName == previousName {
+							volume.Secret.SecretName = name
+							volumes[index] = volume
+							deployment.Spec.Template.Spec.Volumes = volumes
+							newLabel := SplitStr(name)
+							s := strings.Split(newLabel, "=")
+							deployment.Labels[s[0]] = s[1]
+							annotations := make(map[string]string)
+							annotations["kubernetes.io/change-cause"] = "Secret updated to " + name
+							deployment.Annotations = annotations
+						}
+					}
+				}
 			}
-			pretime, err := time.Parse(layout, previousCreatedTime)
+			//container env configmap update
+			deploymentContainer := deployment.Spec.Template.Spec.Containers
+			for index, container := range deployment.Spec.Template.Spec.Containers {
+				for ind, envref := range container.EnvFrom {
+					if label.ConfigMap != "" {
+						if envref.ConfigMapRef != nil {
+							if envref.ConfigMapRef.Name == previousName {
+								envref.ConfigMapRef.Name = name
+								deploymentContainer[index].EnvFrom[ind] = envref
+								deployment.Spec.Template.Spec.Containers = deploymentContainer
+								newLabel := SplitStr(name)
+								s := strings.Split(newLabel, "=")
+								deployment.Labels[s[0]] = s[1]
+								annotations := make(map[string]string)
+								annotations["kubernetes.io/change-cause"] = "container '" + container.Name + "'env configmap updated to " + name
+								deployment.Annotations = annotations
+							}
+						}
+					} else if label.Secret != "" {
+						if envref.SecretRef != nil {
+							if envref.SecretRef.Name == previousName {
+								envref.SecretRef.Name = name
+								deploymentContainer[index].EnvFrom[ind] = envref
+								deployment.Spec.Template.Spec.Containers = deploymentContainer
+								newLabel := SplitStr(name)
+								s := strings.Split(newLabel, "=")
+								deployment.Labels[s[0]] = s[1]
+								annotations := make(map[string]string)
+								annotations["kubernetes.io/change-cause"] = "container '" + container.Name + "'env secret updated to " + name
+								deployment.Annotations = annotations
+							}
+						}
+					}
+				}
+			}
+			//init container env configmap update
+			deployInitContainer := deployment.Spec.Template.Spec.InitContainers
+			for index, initContainer := range deployment.Spec.Template.Spec.InitContainers {
+				for ind, envref := range initContainer.EnvFrom {
+					if label.ConfigMap != "" {
+						if envref.ConfigMapRef != nil {
+							if envref.ConfigMapRef.Name == previousName {
+								envref.ConfigMapRef.Name = name
+								deployInitContainer[index].EnvFrom[ind] = envref
+								deployment.Spec.Template.Spec.InitContainers = deployInitContainer
+								newLabel := SplitStr(name)
+								s := strings.Split(newLabel, "=")
+								deployment.Labels[s[0]] = s[1]
+								annotations := make(map[string]string)
+								annotations["kubernetes.io/change-cause"] = "initContainer '" + initContainer.Name + "' env configmap updated to " + name
+								deployment.Annotations = annotations
+							}
+						}
+					} else if label.Secret != "" {
+						if envref.SecretRef != nil {
+							if envref.SecretRef.Name == previousName {
+								envref.SecretRef.Name = name
+								deployInitContainer[index].EnvFrom[ind] = envref
+								deployment.Spec.Template.Spec.InitContainers = deployInitContainer
+								newLabel := SplitStr(name)
+								s := strings.Split(newLabel, "=")
+								deployment.Labels[s[0]] = s[1]
+								annotations := make(map[string]string)
+								annotations["kubernetes.io/change-cause"] = "initContainer '" + initContainer.Name + "' env secret updated to " + name
+								deployment.Annotations = annotations
+							}
+						}
+					}
+				}
+			}
+			//update deployment template
+			updOpts := metav1.UpdateOptions{}
+			_, err := clientSet.AppsV1().Deployments(label.NameSpace).Update(context.TODO(), &deployment, updOpts)
 			if err != nil {
-				log.Println("failed on parse time", err, time.Now().UTC())
-			}
-			currenCreatedTime, er := time.Parse(layout, metadata["creationTimestamp"].(string))
-			if er != nil {
-				log.Println("failed on parse time", er, time.Now().UTC())
-			}
-			if pretime.Equal(currenCreatedTime) {
-				continue
-			} else if currenCreatedTime.After(pretime) {
-				previousCreatedTime = metadata["creationTimestamp"].(string)
-				labelStr := SplitStr(previousName)
-				var opts metav1.ListOptions
-				opts.LabelSelector = labelStr
-				//deployment update
-				deploylist, er := clientSet.AppsV1().Deployments(label.NameSpace).List(context.TODO(), opts)
-				if er != nil {
-					log.Println("Failed on getting deployment list based on label", er, time.Now().UTC())
-				}
-				if len(deploylist.Items) != 0 {
-					for _, deployment := range deploylist.Items {
-						//volume configmap
-						volumes := deployment.Spec.Template.Spec.Volumes
-						for index, volume := range volumes {
-							if label.ConfigMap != "" {
-								if volume.ConfigMap != nil {
-									if volume.ConfigMap.Name == previousName {
-										volume.ConfigMap.Name = name
-										volumes[index] = volume
-										deployment.Spec.Template.Spec.Volumes = volumes
-										newLabel := SplitStr(name)
-										s := strings.Split(newLabel, "=")
-										deployment.Labels[s[0]] = s[1]
-										annotations := make(map[string]string)
-										annotations["kubernetes.io/change-cause"] = "configmap updated to " + name
-										deployment.Annotations = annotations
-									}
-								}
-							} else if label.Secret != "" {
-								if volume.Secret != nil {
-									if volume.Secret.SecretName == previousName {
-										volume.Secret.SecretName = name
-										volumes[index] = volume
-										deployment.Spec.Template.Spec.Volumes = volumes
-										newLabel := SplitStr(name)
-										s := strings.Split(newLabel, "=")
-										deployment.Labels[s[0]] = s[1]
-										annotations := make(map[string]string)
-										annotations["kubernetes.io/change-cause"] = "Secret updated to " + name
-										deployment.Annotations = annotations
-									}
-								}
-							}
-						}
-						//container env configmap update
-						deploymentContainer := deployment.Spec.Template.Spec.Containers
-						for index, container := range deployment.Spec.Template.Spec.Containers {
-							for ind, envref := range container.EnvFrom {
-								if label.ConfigMap != "" {
-									if envref.ConfigMapRef != nil {
-										if envref.ConfigMapRef.Name == previousName {
-											envref.ConfigMapRef.Name = name
-											deploymentContainer[index].EnvFrom[ind] = envref
-											deployment.Spec.Template.Spec.Containers = deploymentContainer
-											newLabel := SplitStr(name)
-											s := strings.Split(newLabel, "=")
-											deployment.Labels[s[0]] = s[1]
-											annotations := make(map[string]string)
-											annotations["kubernetes.io/change-cause"] = "container '" + container.Name + "'env configmap updated to " + name
-											deployment.Annotations = annotations
-										}
-									}
-								} else if label.Secret != "" {
-									if envref.SecretRef != nil {
-										if envref.SecretRef.Name == previousName {
-											envref.SecretRef.Name = name
-											deploymentContainer[index].EnvFrom[ind] = envref
-											deployment.Spec.Template.Spec.Containers = deploymentContainer
-											newLabel := SplitStr(name)
-											s := strings.Split(newLabel, "=")
-											deployment.Labels[s[0]] = s[1]
-											annotations := make(map[string]string)
-											annotations["kubernetes.io/change-cause"] = "container '" + container.Name + "'env secret updated to " + name
-											deployment.Annotations = annotations
-										}
-									}
-								}
-							}
-						}
-						//init container env configmap update
-						deployInitContainer := deployment.Spec.Template.Spec.InitContainers
-						for index, initContainer := range deployment.Spec.Template.Spec.InitContainers {
-							for ind, envref := range initContainer.EnvFrom {
-								if label.ConfigMap != "" {
-									if envref.ConfigMapRef != nil {
-										if envref.ConfigMapRef.Name == previousName {
-											envref.ConfigMapRef.Name = name
-											deployInitContainer[index].EnvFrom[ind] = envref
-											deployment.Spec.Template.Spec.InitContainers = deployInitContainer
-											newLabel := SplitStr(name)
-											s := strings.Split(newLabel, "=")
-											deployment.Labels[s[0]] = s[1]
-											annotations := make(map[string]string)
-											annotations["kubernetes.io/change-cause"] = "initContainer '" + initContainer.Name + "' env configmap updated to " + name
-											deployment.Annotations = annotations
-										}
-									}
-								} else if label.Secret != "" {
-									if envref.SecretRef != nil {
-										if envref.SecretRef.Name == previousName {
-											envref.SecretRef.Name = name
-											deployInitContainer[index].EnvFrom[ind] = envref
-											deployment.Spec.Template.Spec.InitContainers = deployInitContainer
-											newLabel := SplitStr(name)
-											s := strings.Split(newLabel, "=")
-											deployment.Labels[s[0]] = s[1]
-											annotations := make(map[string]string)
-											annotations["kubernetes.io/change-cause"] = "initContainer '" + initContainer.Name + "' env secret updated to " + name
-											deployment.Annotations = annotations
-										}
-									}
-								}
-							}
-						}
-						//update deployment template
-						updOpts := metav1.UpdateOptions{}
-						_, err := clientSet.AppsV1().Deployments(label.NameSpace).Update(context.TODO(), &deployment, updOpts)
-						if err != nil {
-							log.Println(fmt.Sprintf("Failed on updating deployment '%s'", deployment.Name), "Error ", err.Error(), time.Now().UTC())
-						} else {
-							log.Println(fmt.Sprintf("deployment '%s' updated with config '%s'", deployment.Name, name), time.Now().UTC())
-						}
-					}
-				}
-				//statefulser update
-				stslist, er := clientSet.AppsV1().StatefulSets(label.NameSpace).List(context.TODO(), opts)
-				if er != nil {
-					log.Println("Failed on getting statefulset list based on label", er, time.Now().UTC())
-				}
-				if len(stslist.Items) != 0 {
-					for _, sts := range stslist.Items {
-						//volume configmap
-						volumes := sts.Spec.Template.Spec.Volumes
-						for index, volume := range volumes {
-							if label.ConfigMap != "" {
-								if volume.ConfigMap != nil {
-									if volume.ConfigMap.Name == previousName {
-										volume.ConfigMap.Name = name
-										volumes[index] = volume
-										sts.Spec.Template.Spec.Volumes = volumes
-										newLabel := SplitStr(name)
-										s := strings.Split(newLabel, "=")
-										sts.Labels[s[0]] = s[1]
-										annotations := make(map[string]string)
-										annotations["kubernetes.io/change-cause"] = "configmap updated to " + name
-										sts.Annotations = annotations
-									}
-								}
-							} else if label.Secret != "" {
-								if volume.Secret != nil {
-									if volume.Secret.SecretName == previousName {
-										volume.Secret.SecretName = name
-										volumes[index] = volume
-										sts.Spec.Template.Spec.Volumes = volumes
-										newLabel := SplitStr(name)
-										s := strings.Split(newLabel, "=")
-										sts.Labels[s[0]] = s[1]
-										annotations := make(map[string]string)
-										annotations["kubernetes.io/change-cause"] = "secret updated to " + name
-										sts.Annotations = annotations
-									}
-								}
-							}
-						}
-						//container env configmap update
-						stsContainer := sts.Spec.Template.Spec.Containers
-						for index, container := range sts.Spec.Template.Spec.Containers {
-							for ind, envref := range container.EnvFrom {
-								if label.ConfigMap != "" {
-									if envref.ConfigMapRef != nil {
-										if envref.ConfigMapRef.Name == previousName {
-											envref.ConfigMapRef.Name = name
-											stsContainer[index].EnvFrom[ind] = envref
-											sts.Spec.Template.Spec.Containers = stsContainer
-											newLabel := SplitStr(name)
-											s := strings.Split(newLabel, "=")
-											sts.Labels[s[0]] = s[1]
-											annotations := make(map[string]string)
-											annotations["kubernetes.io/change-cause"] = "container '" + container.Name + "'env configmap updated to " + name
-											sts.Annotations = annotations
-										}
-									}
-								} else if label.Secret != "" {
-									if envref.SecretRef != nil {
-										if envref.SecretRef.Name == previousName {
-											envref.SecretRef.Name = name
-											stsContainer[index].EnvFrom[ind] = envref
-											sts.Spec.Template.Spec.Containers = stsContainer
-											newLabel := SplitStr(name)
-											s := strings.Split(newLabel, "=")
-											sts.Labels[s[0]] = s[1]
-											annotations := make(map[string]string)
-											annotations["kubernetes.io/change-cause"] = "container '" + container.Name + "'env secret updated to " + name
-											sts.Annotations = annotations
-										}
-									}
-								}
-							}
-						}
-						//init container env configmap update
-						stsInitContainer := sts.Spec.Template.Spec.InitContainers
-						for index, initContainer := range sts.Spec.Template.Spec.InitContainers {
-							for ind, envref := range initContainer.EnvFrom {
-								if label.ConfigMap != "" {
-									if envref.ConfigMapRef != nil {
-										if envref.ConfigMapRef.Name == previousName {
-											envref.ConfigMapRef.Name = name
-											stsInitContainer[index].EnvFrom[ind] = envref
-											sts.Spec.Template.Spec.InitContainers = stsInitContainer
-											newLabel := SplitStr(name)
-											s := strings.Split(newLabel, "=")
-											sts.Labels[s[0]] = s[1]
-											annotations := make(map[string]string)
-											annotations["kubernetes.io/change-cause"] = "initContainer '" + initContainer.Name + "' env configmap updated to " + name
-											sts.Annotations = annotations
-										}
-									}
-								} else if label.Secret != "" {
-									if envref.SecretRef != nil {
-
-										if envref.SecretRef.Name == previousName {
-											envref.SecretRef.Name = name
-											stsInitContainer[index].EnvFrom[ind] = envref
-											sts.Spec.Template.Spec.InitContainers = stsInitContainer
-											newLabel := SplitStr(name)
-											s := strings.Split(newLabel, "=")
-											sts.Labels[s[0]] = s[1]
-											annotations := make(map[string]string)
-											annotations["kubernetes.io/change-cause"] = "initContainer '" + initContainer.Name + "' env secret updated to " + name
-											sts.Annotations = annotations
-										}
-									}
-								}
-							}
-						}
-						//update deployment template
-						updOpts := metav1.UpdateOptions{}
-						_, err := clientSet.AppsV1().StatefulSets(label.NameSpace).Update(context.TODO(), &sts, updOpts)
-						if err != nil {
-							log.Println(fmt.Sprintf("Failed on updating statefulset '%s'", sts.Name), "Error ", err.Error(), time.Now().UTC())
-						} else {
-							log.Println(fmt.Sprintf("statefulset '%s' updated with config '%s'", sts.Name, name), time.Now().UTC())
-						}
-					}
-				}
-				previousName = name
+				log.Println(fmt.Sprintf("Failed on updating deployment '%s'", deployment.Name), "Error ", err.Error(), time.Now().UTC())
+			} else {
+				log.Println(fmt.Sprintf("deployment '%s' updated with config '%s'", deployment.Name, name), time.Now().UTC())
 			}
 		}
 	}
+	//statefulser update
+	stslist, er := clientSet.AppsV1().StatefulSets(label.NameSpace).List(context.TODO(), opts)
+	if er != nil {
+		log.Println("Failed on getting statefulset list based on label", er, time.Now().UTC())
+	}
+	if len(stslist.Items) != 0 {
+		for _, sts := range stslist.Items {
+			//volume configmap
+			volumes := sts.Spec.Template.Spec.Volumes
+			for index, volume := range volumes {
+				if label.ConfigMap != "" {
+					if volume.ConfigMap != nil {
+						if volume.ConfigMap.Name == previousName {
+							volume.ConfigMap.Name = name
+							volumes[index] = volume
+							sts.Spec.Template.Spec.Volumes = volumes
+							newLabel := SplitStr(name)
+							s := strings.Split(newLabel, "=")
+							sts.Labels[s[0]] = s[1]
+							annotations := make(map[string]string)
+							annotations["kubernetes.io/change-cause"] = "configmap updated to " + name
+							sts.Annotations = annotations
+						}
+					}
+				} else if label.Secret != "" {
+					if volume.Secret != nil {
+						if volume.Secret.SecretName == previousName {
+							volume.Secret.SecretName = name
+							volumes[index] = volume
+							sts.Spec.Template.Spec.Volumes = volumes
+							newLabel := SplitStr(name)
+							s := strings.Split(newLabel, "=")
+							sts.Labels[s[0]] = s[1]
+							annotations := make(map[string]string)
+							annotations["kubernetes.io/change-cause"] = "secret updated to " + name
+							sts.Annotations = annotations
+						}
+					}
+				}
+			}
+			//container env configmap update
+			stsContainer := sts.Spec.Template.Spec.Containers
+			for index, container := range sts.Spec.Template.Spec.Containers {
+				for ind, envref := range container.EnvFrom {
+					if label.ConfigMap != "" {
+						if envref.ConfigMapRef != nil {
+							if envref.ConfigMapRef.Name == previousName {
+								envref.ConfigMapRef.Name = name
+								stsContainer[index].EnvFrom[ind] = envref
+								sts.Spec.Template.Spec.Containers = stsContainer
+								newLabel := SplitStr(name)
+								s := strings.Split(newLabel, "=")
+								sts.Labels[s[0]] = s[1]
+								annotations := make(map[string]string)
+								annotations["kubernetes.io/change-cause"] = "container '" + container.Name + "'env configmap updated to " + name
+								sts.Annotations = annotations
+							}
+						}
+					} else if label.Secret != "" {
+						if envref.SecretRef != nil {
+							if envref.SecretRef.Name == previousName {
+								envref.SecretRef.Name = name
+								stsContainer[index].EnvFrom[ind] = envref
+								sts.Spec.Template.Spec.Containers = stsContainer
+								newLabel := SplitStr(name)
+								s := strings.Split(newLabel, "=")
+								sts.Labels[s[0]] = s[1]
+								annotations := make(map[string]string)
+								annotations["kubernetes.io/change-cause"] = "container '" + container.Name + "'env secret updated to " + name
+								sts.Annotations = annotations
+							}
+						}
+					}
+				}
+			}
+			//init container env configmap update
+			stsInitContainer := sts.Spec.Template.Spec.InitContainers
+			for index, initContainer := range sts.Spec.Template.Spec.InitContainers {
+				for ind, envref := range initContainer.EnvFrom {
+					if label.ConfigMap != "" {
+						if envref.ConfigMapRef != nil {
+							if envref.ConfigMapRef.Name == previousName {
+								envref.ConfigMapRef.Name = name
+								stsInitContainer[index].EnvFrom[ind] = envref
+								sts.Spec.Template.Spec.InitContainers = stsInitContainer
+								newLabel := SplitStr(name)
+								s := strings.Split(newLabel, "=")
+								sts.Labels[s[0]] = s[1]
+								annotations := make(map[string]string)
+								annotations["kubernetes.io/change-cause"] = "initContainer '" + initContainer.Name + "' env configmap updated to " + name
+								sts.Annotations = annotations
+							}
+						}
+					} else if label.Secret != "" {
+						if envref.SecretRef != nil {
 
+							if envref.SecretRef.Name == previousName {
+								envref.SecretRef.Name = name
+								stsInitContainer[index].EnvFrom[ind] = envref
+								sts.Spec.Template.Spec.InitContainers = stsInitContainer
+								newLabel := SplitStr(name)
+								s := strings.Split(newLabel, "=")
+								sts.Labels[s[0]] = s[1]
+								annotations := make(map[string]string)
+								annotations["kubernetes.io/change-cause"] = "initContainer '" + initContainer.Name + "' env secret updated to " + name
+								sts.Annotations = annotations
+							}
+						}
+					}
+				}
+			}
+			//update deployment template
+			updOpts := metav1.UpdateOptions{}
+			_, err := clientSet.AppsV1().StatefulSets(label.NameSpace).Update(context.TODO(), &sts, updOpts)
+			if err != nil {
+				log.Println(fmt.Sprintf("Failed on updating statefulset '%s'", sts.Name), "Error ", err.Error(), time.Now().UTC())
+			} else {
+				log.Println(fmt.Sprintf("statefulset '%s' updated with config '%s'", sts.Name, name), time.Now().UTC())
+			}
+		}
+	}
+	previousName = name
+	//}
+	// } else if result.Type == "MODIFIED" || result.Type == "DELETED" {
+	// 	continue
+	// } else {
+	// 	watch.Stop()
+	// 	break
+	// }
+	// }
+	// watch.Stop()
 }
 
 // Start the watcher if any previous labels were present
@@ -387,7 +394,7 @@ func TriggerWatcher() error {
 
 	for _, label := range clientWatcher.Labels {
 		log.Println(fmt.Sprintf("Start watcher for configmap label '%s' in nameSpace '%s'", label.ConfigMap, label.NameSpace), time.Now().UTC())
-		go StartWatcher(label)
+		go StartWatcher(label, "", "")
 	}
 	return nil
 
@@ -478,22 +485,28 @@ func PurgeConfigAndSecret() {
 					for _, rs := range allRSs.Items {
 						volumes := rs.Spec.Template.Spec.Volumes
 						for _, volume := range volumes {
-							if volume.ConfigMap.Name == configName {
-								configCheck = true
+							if volume.ConfigMap != nil {
+								if volume.ConfigMap.Name == configName {
+									configCheck = true
+								}
 							}
 						}
 						for _, container := range rs.Spec.Template.Spec.Containers {
 							for _, env := range container.EnvFrom {
-								if env.ConfigMapRef.Name == configName {
-									configCheck = true
+								if env.ConfigMapRef != nil {
+									if env.ConfigMapRef.Name == configName {
+										configCheck = true
+									}
 								}
 							}
 						}
 						//initContainer unused config purge part
 						for _, initContainer := range rs.Spec.Template.Spec.InitContainers {
 							for _, env := range initContainer.EnvFrom {
-								if env.ConfigMapRef.Name == configName {
-									configCheck = true
+								if env.ConfigMapRef != nil {
+									if env.ConfigMapRef.Name == configName {
+										configCheck = true
+									}
 								}
 							}
 						}
@@ -646,22 +659,28 @@ func PurgeConfigAndSecret() {
 						}
 						volumes := stsRevision.Spec.Template.Spec.Volumes
 						for _, volume := range volumes {
-							if volume.Secret.SecretName == secretName {
-								secretCheck = true
+							if volume.Secret != nil {
+								if volume.Secret.SecretName == secretName {
+									secretCheck = true
+								}
 							}
 						}
 						for _, container := range stsRevision.Spec.Template.Spec.Containers {
 							for _, env := range container.EnvFrom {
-								if env.SecretRef.Name == secretName {
-									secretCheck = true
+								if env.SecretRef != nil {
+									if env.SecretRef.Name == secretName {
+										secretCheck = true
+									}
 								}
 							}
 						}
 						//initContainer unused config purge part
 						for _, initContainer := range stsRevision.Spec.Template.Spec.InitContainers {
 							for _, env := range initContainer.EnvFrom {
-								if env.SecretRef.Name == secretName {
-									secretCheck = true
+								if env.SecretRef != nil {
+									if env.SecretRef.Name == secretName {
+										secretCheck = true
+									}
 								}
 							}
 						}
@@ -737,13 +756,28 @@ func StoreLabel(clientWatcher Watcher) error {
 		for _, label := range clientWatcher.Labels {
 			check := false
 			for _, fileLabel := range clientWatcherFile.Labels {
-				fileConfigLabel := "name=" + fileLabel.ConfigMap
-				reqConfigLabel := "name=" + label.ConfigMap
+				fileConfigLabel := ""
+				reqConfigLabel := ""
+				if fileLabel.ConfigMap != "" && label.ConfigMap != "" {
+					fileConfigLabel = "name=" + fileLabel.ConfigMap
+					reqConfigLabel = "name=" + label.ConfigMap
+				} else if fileLabel.Secret != "" && label.Secret != "" {
+					fileConfigLabel = "name=" + fileLabel.Secret
+					reqConfigLabel = "name=" + label.Secret
+				}
+
 				if fileConfigLabel == reqConfigLabel && fileLabel.NameSpace == label.NameSpace {
 					check = true
 				}
 			}
 			if !check {
+				watcherlabel := WatcherLabel{}
+				watcherlabel.NameSpace = label.NameSpace
+				if label.Secret != "" {
+					watcherlabel.Secret = label.Secret
+				} else if label.ConfigMap != "" {
+					watcherlabel.Secret = label.ConfigMap
+				}
 				clientWatcherFile.Labels = append(clientWatcherFile.Labels, label)
 			}
 		}
