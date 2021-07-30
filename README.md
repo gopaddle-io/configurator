@@ -1,4 +1,4 @@
-<img src="https://gopaddle-marketing.s3.ap-southeast-2.amazonaws.com/Configurator.png" width="40%">
+<img src="https://gopaddle-marketing.s3.ap-southeast-2.amazonaws.com/Configurator-sync.png" width="40%">
 
 ___
 
