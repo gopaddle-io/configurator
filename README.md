@@ -4,7 +4,7 @@ ___
 
 
 [![StackShare](http://img.shields.io/badge/tech-stack-0690fa.svg?style=flat)](https://stackshare.io/gopaddleio/gopaddle)
-
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 # Configurator
 
@@ -82,9 +82,4 @@ spec:
 Whenever the customConfigMap is updated, Configurator will create a configMap with a new postfix and will automatically sync up the related deployments with the newly created configMap.
 
 Same functionality applies for secrets as well.
-
-License
-----
-
-Apache License 2.0
 
