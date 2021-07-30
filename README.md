@@ -1,4 +1,7 @@
-# ![](assets/Configurator.png)
+<img src="https://gopaddle-marketing.s3.ap-southeast-2.amazonaws.com/Configurator.png" width="40%">
+
+___
+
 
 [![StackShare](http://img.shields.io/badge/tech-stack-0690fa.svg?style=flat)](https://stackshare.io/gopaddleio/gopaddle)
 
