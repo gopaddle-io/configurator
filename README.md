@@ -1,6 +1,5 @@
 [![StackShare](http://img.shields.io/badge/tech-stack-0690fa.svg?style=flat)](https://stackshare.io/gopaddleio/gopaddle)
-[![Release](https://img.shields.io/github/release/stakater/reloader.svg?style=flat-square)](https://github.com/gopaddle-io/configurator/releases/latest)
-[![license](https://img.shields.io/github/license/stakater/reloader.svg?style=flat-square)](LICENSE)
+
 
 # Configurator
 
