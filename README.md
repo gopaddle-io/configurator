@@ -11,8 +11,6 @@ ___
 
 Configurator is a sync service that keeps Kubernetes deployments in sync with the ConfigMap updates. 
 
-[<img src="https://gopaddle-marketing.s3-ap-southeast-2.amazonaws.com/addo-configurator.png" width="80%">](https://youtu.be/sTX8RASHMXQ?start=2:30:30)
-
 # Supported Versions
 
   - K8s 1.16+
