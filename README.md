@@ -5,7 +5,6 @@ ___
 
 [![StackShare](http://img.shields.io/badge/tech-stack-0690fa.svg?style=flat)](https://stackshare.io/gopaddleio/gopaddle)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-![Discord Shield](https://discordapp.com/api/guilds/864856848279666730/widget.png?style=shield)
 
 # Configurator
 
