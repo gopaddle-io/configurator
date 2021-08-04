@@ -75,10 +75,9 @@ spec:
 ```
 Whenever the customConfigMap is updated, Configurator will create a configMap with a new postfix and will automatically sync up the related deployments with the newly created configMap.
 
-Same functionality applies for secrets as well.
+Same functionality applies for secrets as well
 
 License
 ----
-
 Apache License 2.0
 
