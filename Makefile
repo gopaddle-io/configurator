@@ -1,7 +1,14 @@
+ifndef DOCKER_IMAGE_REPO
+  DOCKER_IMAGE_REPO=gopaddle/configurator
+endif
 
+ifndef DOCKER_IMAGE_TAG
+  DOCKER_IMAGE_TAG=latest
+endif
 
 clean: clean-configurator
 build: build-configurator
+push: push-image
 deploy: deploy-configurator
 remove: remove-configurator
 
@@ -29,6 +36,8 @@ remove-configurator:
 
 build-configurator:
 	-go mod vendor
-	-go build -o configurator .
+	-go build -o configurator . 
 	-docker build . -t ${DOCKER_IMAGE_REPO}:${DOCKER_IMAGE_TAG}
+
+push-image:
 	-docker push ${DOCKER_IMAGE_REPO}:${DOCKER_IMAGE_TAG}
