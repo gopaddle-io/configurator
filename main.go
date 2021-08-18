@@ -8,7 +8,6 @@ import (
 	"github.com/gopaddle-io/configurator/pkg/signals"
 
 	"github.com/gopaddle-io/configurator/watcher"
-	//"k8s.io/client-go/tools/clientcmd"
 
 	clientset "github.com/gopaddle-io/configurator/pkg/client/clientset/versioned"
 	informers "github.com/gopaddle-io/configurator/pkg/client/informers/externalversions"
@@ -21,12 +20,6 @@ import (
 )
 
 func main() {
-	// args := os.Args[1:]
-	// if len(args) < 1 {
-	// 	log.Panicln("Kubernetes Client Config location is not provided,\n\t")
-	// }
-	// klog.InitFlags(nil)
-	// flag.Parse()
 
 	cfg, err := rest.InClusterConfig()
 	if err != nil {
@@ -43,11 +36,6 @@ func main() {
 
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
-
-	// cfg, err := clientcmd.BuildConfigFromFlags("", args[0])
-	// if err != nil {
-	// 	klog.Fatalf("Error building kubeconfig: %s", err.Error(), time.Now().UTC())
-	// }
 
 	clientSet, err := kubernetes.NewForConfig(cfg)
 	if err != nil {

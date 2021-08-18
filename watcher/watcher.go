@@ -27,16 +27,6 @@ const (
 )
 
 func StartWatcher(label WatcherLabel, prevConfig, newConfig string) {
-	//creating clientset
-	// args := os.Args[1:]
-	// if len(args) < 1 {
-	// 	log.Panicln("Kubernetes Client Config is not provided,\n\t")
-	// }
-	// cfg, err := clientcmd.BuildConfigFromFlags("", args[0])
-	// if err != nil {
-	// 	log.Fatalf("Error building kubeconfig: %s", err.Error(), time.Now().UTC())
-	// 	return
-	// }
 	cfg, err := rest.InClusterConfig()
 	if err != nil {
 		klog.Fatalf("Error building kubeconfig: %s", err.Error())
@@ -58,68 +48,8 @@ func StartWatcher(label WatcherLabel, prevConfig, newConfig string) {
 		listOpts.LabelSelector = secretLabel
 	}
 
-	//var watch watch.Interface
-	//var er error
-	// if label.ConfigMap != "" {
-	// 	for {
-	// 		watch, er = clientSet.CoreV1().ConfigMaps(label.NameSpace).Watch(context.TODO(), listOpts)
-	// 		if er != nil {
-	// 			log.Println("failed on watching configmap label '%s'", label.ConfigMap)
-	// 			log.Println("error in wtach --->", er.Error())
-	// 			continue
-	// 		} else {
-	// 			break
-	// 		}
-	// 	}
-	// } else if label.Secret != "" {
-	// 	for {
-	// 		watch, er = clientSet.CoreV1().Secrets(label.NameSpace).Watch(context.TODO(), listOpts)
-	// 		if er != nil {
-	// 			log.Println("failed on watching configmap label '%s'", label.Secret)
-	// 			log.Println("error in wtach --->", er.Error())
-	// 			continue
-	// 		} else {
-	// 			break
-	// 		}
-	// 	}
-	// }
-
 	previousName := prevConfig
 	name := newConfig
-	// previousCreatedTime := ""
-	// layout := "2006-01-02T15:04:05Z"
-	// for {
-	//result := <-watch.ResultChan()
-	// if result.Type == "ADDED" {
-	// 	data, errs := json.Marshal(result.Object)
-	// 	if errs != nil {
-	// 		log.Println("Failed to marshal", errs, time.Now().UTC())
-	// 	}
-	// 	var f interface{}
-	// 	if err := json.Unmarshal(data, &f); err != nil {
-	// 		log.Println("Failed to unmarshal", err, time.Now().UTC())
-	// 	}
-	// 	object := f.(map[string]interface{})
-	// 	//geting metadata
-	// 	metadata := object["metadata"].(map[string]interface{})
-	// 	name := metadata["name"].(string)
-
-	// 	if previousName == "" {
-	// 		previousName = name
-	// 		previousCreatedTime = metadata["creationTimestamp"].(string)
-	// 	}
-	// 	pretime, err := time.Parse(layout, previousCreatedTime)
-	// 	if err != nil {
-	// 		log.Println("failed on parse time", err, time.Now().UTC())
-	// 	}
-	// 	currenCreatedTime, er := time.Parse(layout, metadata["creationTimestamp"].(string))
-	// 	if er != nil {
-	// 		log.Println("failed on parse time", er, time.Now().UTC())
-	// 	}
-	// 	if pretime.Equal(currenCreatedTime) {
-	// 		continue
-	// 	} else if currenCreatedTime.After(pretime) {
-	// 		previousCreatedTime = metadata["creationTimestamp"].(string)
 	labelStr := SplitStr(previousName)
 	var opts metav1.ListOptions
 	opts.LabelSelector = labelStr
@@ -365,15 +295,6 @@ func StartWatcher(label WatcherLabel, prevConfig, newConfig string) {
 		}
 	}
 	previousName = name
-	//}
-	// } else if result.Type == "MODIFIED" || result.Type == "DELETED" {
-	// 	continue
-	// } else {
-	// 	watch.Stop()
-	// 	break
-	// }
-	// }
-	// watch.Stop()
 }
 
 // Start the watcher if any previous labels were present
@@ -418,18 +339,10 @@ func SplitStr(str string) string {
 //purge unused configmaps and secret
 func PurgeConfigAndSecret() {
 	log.Println("purge unused configmap and secret started", time.Now().UTC())
-	// args := os.Args[1:]
-	// if len(args) < 1 {
-	// 	log.Panicln("Kubernetes Client Configuration is not provided,\n\t")
-	// }
 	cfg, err := rest.InClusterConfig()
 	if err != nil {
 		klog.Fatalf("Error building kubeconfig: %s", err.Error())
 	}
-	// cfg, err := clientcmd.BuildConfigFromFlags("", args[0])
-	// if err != nil {
-	// 	log.Fatalf("Error building kubeconfig: %s", err.Error())
-	// }
 	clientSet, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
 		log.Fatalf("Error building kubernetes clientset: %s", err.Error())

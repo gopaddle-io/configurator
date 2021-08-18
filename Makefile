@@ -1,10 +1,4 @@
-ifndef DOCKER_IMAGE_REPO
-  DOCKER_IMAGE_REPO=gopaddle/configurator
-endif
 
-ifndef DOCKER_IMAGE_TAG
-  DOCKER_IMAGE_TAG=latest
-endif
 
 clean: clean-configurator
 build: build-configurator
@@ -16,6 +10,7 @@ clean-configurator:
 	-docker rmi ${DOCKER_IMAGE_REPO}:${DOCKER_IMAGE_TAG}
 
 deploy-configurator:
+	-kubectl create ns configurator		
 	-kubectl apply -f deploy/configurator-serviceaccount.yaml
 	-kubectl apply -f deploy/configurator-clusterrole.yaml
 	-kubectl apply -f deploy/configurator-clusterrolebinding.yaml
@@ -30,6 +25,7 @@ remove-configurator:
 	-kubectl delete -f deploy/configurator-clusterrolebinding.yaml
 	-kubectl delete -f deploy/configurator-clusterrole.yaml
 	-kubectl delete -f deploy/configurator-serviceaccount.yaml
+	-kubectl delete ns configurator
 
 build-configurator:
 	-go mod vendor
