@@ -1,4 +1,4 @@
-FROM bluemeric/golang:1.12.6 
+FROM golang 
 MAINTAINER Bluemeric <info@bluemeric.com> 
 
 RUN mkdir /app/ 

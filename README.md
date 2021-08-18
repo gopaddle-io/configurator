@@ -1,5 +1,6 @@
 <img src="https://gopaddle-marketing.s3.ap-southeast-2.amazonaws.com/Configurator-sync-service.png" width="50%">
 ___
+
 [![StackShare](http://img.shields.io/badge/tech-stack-0690fa.svg?style=flat)](https://stackshare.io/gopaddleio/gopaddle)
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
@@ -17,13 +18,13 @@ In order to keep the deployments and statefulsets in sync with the ConfigMap and
 ### Building and Deploying Configurator
 Build the source code and the docker image for Configurator. Push the image to registry and deploy configurator in the cluster.
 ```sh
-make clean build deploy
+make clean build push deploy 
 ```
 
 ### Removing Configurator
 Remove the configurator deployment from cluster and delete local binary and docker image
 ```sh
-make remove clean
+make remove clean 
 ```
 
 ### Deploy Configurator using YAML files
