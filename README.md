@@ -2,11 +2,8 @@
 ___
 
 [![StackShare](http://img.shields.io/badge/tech-stack-0690fa.svg?style=flat)](https://stackshare.io/gopaddleio/gopaddle)
-
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-
 [![Twitter URL](https://img.shields.io/twitter/url?label=%40configuratork8s&style=social&url=https%3A%2F%2Ftwitter.com%2Fconfiguratork8s)](https://twitter.com/configuratork8s)
-
 [![Discord](https://img.shields.io/discord/864856848279666730.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/vpEv3HJ)
 
 # Configurator
