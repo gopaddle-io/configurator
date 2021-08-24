@@ -4,9 +4,9 @@ entries:
   - apiVersion: v2
     appVersion: 1.16.0
     created: "2021-08-24T16:11:58.900558432+05:30"
-    description: A Helm chart for Kubernetes
+    description: Helm chart for installing configurator CRD and Custom Controller
     digest: 96071f2a0b2d22227e6f23eb5fa0e83990939e39369b5ffb98bb547c15a06040
-    name: configurator_helm_chart
+    name: configurator
     type: application
     urls:
     - https://gopaddle-io.github.io/configurator/helm/configurator_helm_chart-0.1.0.tgz
