@@ -9,6 +9,6 @@ entries:
     name: configurator_helm_chart
     type: application
     urls:
-    - https://gopaddle-io.github.io/configurator/configurator_helm_chart-0.1.0.tgz
+    - https://gopaddle-io.github.io/configurator/helm/configurator_helm_chart-0.1.0.tgz
     version: 0.1.0
 generated: "2021-08-24T16:11:58.8994868+05:30"
