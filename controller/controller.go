@@ -403,7 +403,7 @@ func (c *Controller) syncHandler(key string) error {
 		configlabel := watcher.WatcherLabel{}
 		configlabel.NameSpace = customConfigmap.Namespace
 		configlabel.ConfigMap = customConfigmap.Spec.ConfigMapName
-		go watcher.StartWatcher(configlabel, cm.Name, "")
+		go watcher.StartWatcher(c.kubeclientset, configlabel, cm.Name, "")
 		//store label in file
 		arrConfiglabel := watcher.Watcher{}
 		arrConfiglabel.Labels = append(arrConfiglabel.Labels, configlabel)
@@ -445,7 +445,7 @@ func (c *Controller) syncHandler(key string) error {
 			configlabel := watcher.WatcherLabel{}
 			configlabel.NameSpace = customConfigmap.Namespace
 			configlabel.ConfigMap = customConfigmap.Spec.ConfigMapName
-			go watcher.StartWatcher(configlabel, configMap.Name, cm.Name)
+			go watcher.StartWatcher(c.kubeclientset, configlabel, configMap.Name, cm.Name)
 			//store label in file
 			arrConfiglabel := watcher.Watcher{}
 			arrConfiglabel.Labels = append(arrConfiglabel.Labels, configlabel)

@@ -15,28 +15,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
-
-	"k8s.io/client-go/rest"
-
 	//"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/klog"
 )
 
 const (
 	path = "labelconfig/"
 )
 
-func StartWatcher(label WatcherLabel, prevConfig, newConfig string) {
-	cfg, err := rest.InClusterConfig()
-	if err != nil {
-		klog.Fatalf("Error building kubeconfig: %s", err.Error())
-	}
-	clientSet, err := kubernetes.NewForConfig(cfg)
-	if err != nil {
-		log.Fatalf("Error building kubernetes clientset: %s", err.Error(), time.Now().UTC())
-		return
-	}
-
+func StartWatcher(clientSet kubernetes.Interface, label WatcherLabel, prevConfig, newConfig string) {
 	var listOpts metav1.ListOptions
 
 	listOpts.Watch = true
@@ -298,7 +284,7 @@ func StartWatcher(label WatcherLabel, prevConfig, newConfig string) {
 }
 
 // Start the watcher if any previous labels were present
-func TriggerWatcher() error {
+func TriggerWatcher(clientSet *kubernetes.Clientset) error {
 	clientWatcher := Watcher{}
 	//reading file
 	filePath := path + "labelconfig.json"
@@ -315,7 +301,7 @@ func TriggerWatcher() error {
 
 	for _, label := range clientWatcher.Labels {
 		log.Println(fmt.Sprintf("Start watcher for configmap label '%s' in nameSpace '%s'", label.ConfigMap, label.NameSpace), time.Now().UTC())
-		go StartWatcher(label, "", "")
+		go StartWatcher(clientSet, label, "", "")
 	}
 	return nil
 
@@ -337,16 +323,8 @@ func SplitStr(str string) string {
 }
 
 //purge unused configmaps and secret
-func PurgeConfigAndSecret() {
+func PurgeConfigAndSecret(clientSet kubernetes.Interface) {
 	log.Println("purge unused configmap and secret started", time.Now().UTC())
-	cfg, err := rest.InClusterConfig()
-	if err != nil {
-		klog.Fatalf("Error building kubeconfig: %s", err.Error())
-	}
-	clientSet, err := kubernetes.NewForConfig(cfg)
-	if err != nil {
-		log.Fatalf("Error building kubernetes clientset: %s", err.Error())
-	}
 
 	clientWatcher := Watcher{}
 	//reading file
@@ -619,10 +597,12 @@ func PurgeConfigAndSecret() {
 }
 
 //trigger purge configmap every 5 mins
-func PurgeJob() {
+func PurgeJob(clientSet kubernetes.Interface) {
 	cron := CornJob{Cron: cron.New()}
 	go func() {
-		cron.Cron.AddFunc("@every 5m", PurgeConfigAndSecret)
+		cron.Cron.AddFunc("@every 5m", func() {
+			PurgeConfigAndSecret(clientSet)
+		})
 		cron.Cron.Start()
 	}()
 }
