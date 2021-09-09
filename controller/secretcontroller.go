@@ -72,7 +72,7 @@ func (c *Controller) secretSyncHandler(key string) error {
 		secretlabel := watcher.WatcherLabel{}
 		secretlabel.NameSpace = customSecret.Namespace
 		secretlabel.Secret = customSecret.Spec.SecretName
-		go watcher.StartWatcher(secretlabel, s.Name, "")
+		go watcher.StartWatcher(c.kubeclientset, secretlabel, s.Name, "")
 		//store label in file
 		arrSecretlabel := watcher.Watcher{}
 		arrSecretlabel.Labels = append(arrSecretlabel.Labels, secretlabel)
@@ -138,7 +138,7 @@ func (c *Controller) secretSyncHandler(key string) error {
 			secretlabel := watcher.WatcherLabel{}
 			secretlabel.NameSpace = customSecret.Namespace
 			secretlabel.Secret = customSecret.Spec.SecretName
-			go watcher.StartWatcher(secretlabel, secret.Name, s.Name)
+			go watcher.StartWatcher(c.kubeclientset, secretlabel, secret.Name, s.Name)
 			//store label in file
 			arrSecretlabel := watcher.Watcher{}
 			arrSecretlabel.Labels = append(arrSecretlabel.Labels, secretlabel)
