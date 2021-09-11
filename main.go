@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"time"
 
 	configController "github.com/gopaddle-io/configurator/controller"
@@ -49,7 +48,7 @@ func main() {
 	//trigger previous labels and configmaps
 	e := watcher.TriggerWatcher(clientSet)
 	if e != nil {
-		fmt.Println("failed on triggering watcher for pre-existing labels", e, time.Now().UTC())
+		klog.Warningf("failed on triggering watcher for pre-existing labels", e, time.Now().UTC())
 	}
 	//purge unused configmaps and secrets
 	watcher.PurgeJob(clientSet)
