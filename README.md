@@ -11,7 +11,7 @@ In order to keep the deployments and statefulsets in sync with the ConfigMap and
 # Supported Versions
   - K8s 1.16+
 
-### Building and Deploying Configurator
+### Building and Deploying Configurator (developer)
 Build the source code and the docker image for Configurator. Push the image to registry and deploy configurator in the cluster.
 ```sh
 make clean build push deploy 
@@ -22,6 +22,10 @@ Remove the configurator deployment from cluster and delete local binary and dock
 ```sh
 make remove clean 
 ```
+
+### Helm chart for end-users
+
+It is important to note that `push` target is limited to project maintainers. For end-users, a helm chart is available. Please, follow the [instructions about using the Helm Chart](helm-src/README.md). At the moment, the helm chart provides limited values to be configured and will be improved overtime.
 
 ### Deploy Configurator using YAML files
 YAML files for deploying the latest version of Configurator is available under the deploy folder.You need to deploy the CRDs, the controller and the service/role binding.

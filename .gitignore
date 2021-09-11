@@ -1,4 +1,4 @@
 vendor/
 labelConfig/*
 main
-configurator
+/configurator

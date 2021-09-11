@@ -1,0 +1,4 @@
+image: gopaddle/configurator:latest
+namespace: configurator
+replicaCount: 1
+replicas: 1
