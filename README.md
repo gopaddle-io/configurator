@@ -29,7 +29,7 @@ In order to keep the deployments and statefulsets in sync with the ConfigMap and
 
 ## Additional resources
 
-1. Check out the RESOURCES file for links to configurator blog bosts and videos.
+1. Check out the ADDITIONAL_RESOURCES file for blog posts and videos related to configurator.
 2. Raise an issue if you want your blog post to be added to the file.
 3. Avoid raising an issue asking for help, instead join the discord community where welcoming contributors will help you navigate around your problem.
 
