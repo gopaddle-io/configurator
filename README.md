@@ -20,7 +20,7 @@ In order to keep the deployments and statefulsets in sync with the ConfigMap and
 2. If you notice a bug or have a useful feature in mind please raise an issue in the issue tracker so that the contributors can work on it and since it helps the community as a    whole (try labelling the issues so they get reviewed sooner).
 3. Create a separate feature branch for new enhancements you wish to add to Configurator.
 4. Join our discord community where we discuss open issues and help fellow contributors to contribute more easily.
-5. ### Pull requests
+### Pull requests
 
   * We follow the standard ‘Fork and Pull’ workflow.
   * Fetch the latest code from master branch and resolve any conflicts before sending a pull request.
@@ -29,7 +29,7 @@ In order to keep the deployments and statefulsets in sync with the ConfigMap and
 
 ## Additional resources
 
-1. Check out the ADDITIONAL_RESOURCES file for blog posts and videos related to configurator.
+1. Check out the [ADDITIONAL_RESOURCES](/ADDITIONAL_RESOURCES.md) file for blog posts and videos related to configurator.
 2. Raise an issue if you want your blog post to be added to the file.
 3. Avoid raising an issue asking for help, instead join the discord community where welcoming contributors will help you navigate around your problem.
 
