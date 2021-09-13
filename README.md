@@ -20,13 +20,12 @@ In order to keep the deployments and statefulsets in sync with the ConfigMap and
 2. If you notice a bug or have a useful feature in mind please raise an issue in the issue tracker so that the contributors can work on it and since it helps the community as a    whole (try labelling the issues so they get reviewed sooner).
 3. Create a separate feature branch for new enhancements you wish to add to Configurator.
 4. Join our discord community where we discuss open issues and help fellow contributors to contribute more easily.
+5.#### Pull requests
 
-####    Pull requests
-
-1. We follow the standard ‘Fork and Pull’ workflow.
-2. Fetch the latest code from master branch and resolve any conflicts before sending a pull request.
-3. Make sure you build and test the changes before sending a pull request.
-4. Ensure the README is updated with any interface or architecture changes.
+  * We follow the standard ‘Fork and Pull’ workflow.
+  * Fetch the latest code from master branch and resolve any conflicts before sending a pull request.
+  * Make sure you build and test the changes before sending a pull request.
+  * Ensure the README is updated with any interface or architecture changes.
 
 ## Additional resources
 
