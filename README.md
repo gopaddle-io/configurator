@@ -5,13 +5,37 @@
 [![Discord](https://discordapp.com/api/guilds/864856848279666730/widget.png?style=banner2)](https://discord.gg/dr24Z4BmP8)
 
 # Configurator
-Configurator is a version control and a sync service that keeps Kubernetes ConfigMaps and Secrets in sync with the deployment. Configurator uses CRDs to create CustomConfigMaps and CustomSecrets that in turn create ConfigMaps and Secrets with a postfix. As and when a change is detected in the CustomConfigMap or CustomSecret, Configurator automaticatlly generates a new ConfigMap with a new postfix. This acts like version controlling the ConfigMaps.
+Configurator is a version control and a sync service that keeps Kubernetes ConfigMaps and Secrets in sync with the deployment. Configurator uses CRDs to create CustomConfigMaps and CustomSecrets that in turn create ConfigMaps and Secrets with a postfix. As and when a change is detected in the CustomConfigMap or CustomSecret, Configurator automaticatlly generates a new ConfigMap with a new postfix. This acts like a version control for the ConfigMaps.
 In order to keep the deployments and statefulsets in sync with the ConfigMap and Secret version, users must start with creating a CustomConfigMap as the first step. This creates a new ConfigMap with a postfix ie., first version. Users then have to reference the ConfigMap along with the postfix in their deployment and satefulset specifications. From them on, users can edit the CustomConfigMap directly. Any change in the CustomConfigMap will be automatically rolled out to all the deployments and statefulsets referencing the initial configMap version. A change in ConfigMap not only creates a new ConfigMap version, but also rolls out a new deployment version. This enables both rolling update and rollback of ConfigMaps in sync with the deployment versions.
+
 
 # Supported Versions
   - K8s 1.16+
 
-### Building and Deploying Configurator (developer)
+# Contribution and additional resources
+
+## Contribution
+
+1. If you wish to contribute to configurator then check the issue tracker to see if you help out with any of them.
+2. If you notice a bug or have a useful feature in mind please raise an issue in the issue tracker so that the contributors can work on it and since it helps the community as a    whole (try labelling the issues so they get reviewed sooner).
+3. Create a separate feature branch for new enhancements you wish to add to Configurator.
+4. Join our discord community where we discuss open issues and help fellow contributors to contribute more easily.
+### Pull requests
+
+  * We follow the standard ‘Fork and Pull’ workflow.
+  * Fetch the latest code from master branch and resolve any conflicts before sending a pull request.
+  * Make sure you build and test the changes before sending a pull request.
+  * Ensure the README is updated with any interface or architecture changes.
+
+## Additional resources
+
+1. Check out the [ADDITIONAL_RESOURCES](/ADDITIONAL_RESOURCES.md) file for blog posts and videos related to configurator.
+2. Raise an issue if you want your blog post to be added to the file.
+3. Avoid raising an issue asking for help, instead join the discord community where welcoming contributors will help you navigate around your problem.
+
+# How to use Configurator.
+
+### Building and Deploying Configurator
 Build the source code and the docker image for Configurator. Push the image to registry and deploy configurator in the cluster.
 ```sh
 make clean build push deploy 
@@ -22,10 +46,6 @@ Remove the configurator deployment from cluster and delete local binary and dock
 ```sh
 make remove clean 
 ```
-
-### Helm chart for end-users
-
-It is important to note that `push` target is limited to project maintainers. For end-users, a helm chart is available. Please, follow the [instructions about using the Helm Chart](helm-src/README.md). At the moment, the helm chart provides limited values to be configured and will be improved overtime.
 
 ### Deploy Configurator using YAML files
 YAML files for deploying the latest version of Configurator is available under the deploy folder.You need to deploy the CRDs, the controller and the service/role binding.
@@ -45,7 +65,7 @@ NAME                                 READY   UP-TO-DATE   AVAILABLE   AGE
 configurator-controller              1/1     1            1           4h38m
 ```
 
-### How to use ?
+### Using Configurator
 Once configurator is deployed in the cluster, start creating customConfigMaps. Example customConfigMaps are available under artifacts/examples folder.
 Create customConfigMap. This will create a configMap with a postfix.
 ```sh
@@ -115,15 +135,10 @@ kubectl delete ccs -n <namespace>
 ### Architecture
 <img src="https://gopaddle-marketing.s3.ap-southeast-2.amazonaws.com/configurartor-architecture.png">
 
-### Contributing
-1. Start contributing by creating an issue in the issue tracker.
-2. Create a separate feature branch for new enhancements.
-3. We follow the standard ‘Fork and Pull’ workflow.
-
-##### Pull Requests
+### Pull Requests
 1. Fetch the latest code from master branch and resolve any conflicts before sending a pull request.
 2. Make sure you build and test the changes before sending a pull request.
 3. Ensure the README is updated with any interface or architecture changes.
 
 ## Maintainers
-Configurator is maintained by [gopaddle.io](https://gopaddle.io) team.
+Congurator is maintained by [gopaddle.io](https://gopaddle.io) team.
