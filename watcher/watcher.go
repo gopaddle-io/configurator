@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"strings"
 	"time"
@@ -15,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	"k8s.io/klog"
 	//"k8s.io/client-go/tools/clientcmd"
 )
 
@@ -42,7 +42,7 @@ func StartWatcher(clientSet kubernetes.Interface, label WatcherLabel, prevConfig
 	//deployment update
 	deploylist, er := clientSet.AppsV1().Deployments(label.NameSpace).List(context.TODO(), opts)
 	if er != nil {
-		log.Println("Failed on getting deployment list based on label", er, time.Now().UTC())
+		klog.Infof("Failed on getting deployment list based on label", er, time.Now().UTC())
 	}
 	if len(deploylist.Items) != 0 {
 		for _, deployment := range deploylist.Items {
@@ -153,16 +153,16 @@ func StartWatcher(clientSet kubernetes.Interface, label WatcherLabel, prevConfig
 			updOpts := metav1.UpdateOptions{}
 			_, err := clientSet.AppsV1().Deployments(label.NameSpace).Update(context.TODO(), &deployment, updOpts)
 			if err != nil {
-				log.Println(fmt.Sprintf("Failed on updating deployment '%s'", deployment.Name), "Error ", err.Error(), time.Now().UTC())
+				klog.Infof(fmt.Sprintf("Failed on updating deployment '%s'", deployment.Name), "Error ", err.Error(), time.Now().UTC())
 			} else {
-				log.Println(fmt.Sprintf("deployment '%s' updated with config '%s'", deployment.Name, name), time.Now().UTC())
+				klog.Infof(fmt.Sprintf("deployment '%s' updated with config '%s'", deployment.Name, name), time.Now().UTC())
 			}
 		}
 	}
 	//statefulser update
 	stslist, er := clientSet.AppsV1().StatefulSets(label.NameSpace).List(context.TODO(), opts)
 	if er != nil {
-		log.Println("Failed on getting statefulset list based on label", er, time.Now().UTC())
+		klog.Infof("Failed on getting statefulset list based on label", er, time.Now().UTC())
 	}
 	if len(stslist.Items) != 0 {
 		for _, sts := range stslist.Items {
@@ -274,9 +274,9 @@ func StartWatcher(clientSet kubernetes.Interface, label WatcherLabel, prevConfig
 			updOpts := metav1.UpdateOptions{}
 			_, err := clientSet.AppsV1().StatefulSets(label.NameSpace).Update(context.TODO(), &sts, updOpts)
 			if err != nil {
-				log.Println(fmt.Sprintf("Failed on updating statefulset '%s'", sts.Name), "Error ", err.Error(), time.Now().UTC())
+				klog.Infof(fmt.Sprintf("Failed on updating statefulset '%s'", sts.Name), "Error ", err.Error(), time.Now().UTC())
 			} else {
-				log.Println(fmt.Sprintf("statefulset '%s' updated with config '%s'", sts.Name, name), time.Now().UTC())
+				klog.Infof(fmt.Sprintf("statefulset '%s' updated with config '%s'", sts.Name, name), time.Now().UTC())
 			}
 		}
 	}
@@ -290,17 +290,17 @@ func TriggerWatcher(clientSet *kubernetes.Clientset) error {
 	filePath := path + "labelconfig.json"
 	file, err := ioutil.ReadFile(filePath)
 	if err != nil {
-		log.Println("Configuration file not found", err.Error(), time.Now().UTC())
+		klog.Infof("Configuration file not found", err.Error(), time.Now().UTC())
 		return err
 	}
 	e := json.Unmarshal(file, &clientWatcher)
 	if e != nil {
-		log.Println("failed on unmarshal", e.Error(), time.Now().UTC())
+		klog.Infof("failed on unmarshal", e.Error(), time.Now().UTC())
 		return e
 	}
 
 	for _, label := range clientWatcher.Labels {
-		log.Println(fmt.Sprintf("Start watcher for configmap label '%s' in nameSpace '%s'", label.ConfigMap, label.NameSpace), time.Now().UTC())
+		klog.Infof(fmt.Sprintf("Start watcher for configmap label '%s' in nameSpace '%s'", label.ConfigMap, label.NameSpace), time.Now().UTC())
 		go StartWatcher(clientSet, label, "", "")
 	}
 	return nil
@@ -324,19 +324,19 @@ func SplitStr(str string) string {
 
 //purge unused configmaps and secret
 func PurgeConfigAndSecret(clientSet kubernetes.Interface) {
-	log.Println("purge unused configmap and secret started", time.Now().UTC())
+	klog.Infof("purge unused configmap and secret started", time.Now().UTC())
 
 	clientWatcher := Watcher{}
 	//reading file
 	filePath := path + "labelconfig.json"
 	file, err := ioutil.ReadFile(filePath)
 	if err != nil {
-		log.Println("Configuration file not found", time.Now().UTC())
+		klog.Infof("Configuration file not found", time.Now().UTC())
 		return
 	}
 	e := json.Unmarshal(file, &clientWatcher)
 	if e != nil {
-		log.Println("Failed to unmarshal", e.Error(), time.Now().UTC())
+		klog.Infof("Failed to unmarshal", e.Error(), time.Now().UTC())
 		return
 	}
 	for _, label := range clientWatcher.Labels {
@@ -347,7 +347,7 @@ func PurgeConfigAndSecret(clientSet kubernetes.Interface) {
 			//getting all configmap with specific label
 			listConfig, er := clientSet.CoreV1().ConfigMaps(label.NameSpace).List(context.TODO(), listOpts)
 			if er != nil {
-				log.Println("Failed on watching configmap label '%s'", label.ConfigMap, time.Now().UTC())
+				klog.Infof("Failed on watching configmap label '%s'", label.ConfigMap, time.Now().UTC())
 				continue
 			}
 
@@ -361,17 +361,17 @@ func PurgeConfigAndSecret(clientSet kubernetes.Interface) {
 				//getting all deployment with specific label
 				deploylist, er := clientSet.AppsV1().Deployments(label.NameSpace).List(context.TODO(), opts)
 				if er != nil {
-					log.Println(fmt.Sprintf("Failed on getting deployment list based on label '%s'", label.ConfigMap), er, time.Now().UTC())
+					klog.Infof(fmt.Sprintf("Failed on getting deployment list based on label '%s'", label.ConfigMap), er, time.Now().UTC())
 				}
 				for _, deployment := range deploylist.Items {
 					selector, err := metav1.LabelSelectorAsSelector(deployment.Spec.Selector)
 					if err != nil {
-						log.Println("Failed get selector from deployment %v", err, time.Now().UTC())
+						klog.Infof("Failed get selector from deployment %v", err, time.Now().UTC())
 					}
 					options := metav1.ListOptions{LabelSelector: selector.String()}
 					allRSs, err := clientSet.AppsV1().ReplicaSets(label.NameSpace).List(context.TODO(), options)
 					if err != nil {
-						log.Println(fmt.Sprintf("Failed on getting deployment list based on label '%s'", label.ConfigMap), err, time.Now().UTC())
+						klog.Infof(fmt.Sprintf("Failed on getting deployment list based on label '%s'", label.ConfigMap), err, time.Now().UTC())
 					}
 					for _, rs := range allRSs.Items {
 						volumes := rs.Spec.Template.Spec.Volumes
@@ -406,23 +406,23 @@ func PurgeConfigAndSecret(clientSet kubernetes.Interface) {
 				//getting all sts with specific label
 				stslist, er := clientSet.AppsV1().StatefulSets(label.NameSpace).List(context.TODO(), opts)
 				if er != nil {
-					log.Println(fmt.Sprintf("Failed on getting statefulset list based on label '%s'", label.ConfigMap), er, time.Now().UTC())
+					klog.Infof(fmt.Sprintf("Failed on getting statefulset list based on label '%s'", label.ConfigMap), er, time.Now().UTC())
 				}
 				for _, sts := range stslist.Items {
 					selector, err := metav1.LabelSelectorAsSelector(sts.Spec.Selector)
 					if err != nil {
-						log.Println("Failed get selector from deployment %v", err, time.Now().UTC())
+						klog.Infof("Failed get selector from deployment %v", err, time.Now().UTC())
 					}
 					options := metav1.ListOptions{LabelSelector: selector.String()}
 					allRevisions, err := clientSet.AppsV1().ControllerRevisions(label.NameSpace).List(context.TODO(), options)
 					if err != nil {
-						log.Println(fmt.Sprintf("Failed on getting sts list based on label '%s'", label.ConfigMap), err, time.Now().UTC())
+						klog.Infof(fmt.Sprintf("Failed on getting sts list based on label '%s'", label.ConfigMap), err, time.Now().UTC())
 					}
 					for _, rs := range allRevisions.Items {
 						stsRevision := appsv1.StatefulSet{}
 						er := json.Unmarshal(rs.Data.Raw, &stsRevision)
 						if er != nil {
-							log.Println("failed on unmarshal", er.Error(), time.Now().UTC())
+							klog.Infof("failed on unmarshal", er.Error(), time.Now().UTC())
 						}
 						volumes := stsRevision.Spec.Template.Spec.Volumes
 						for _, volume := range volumes {
@@ -459,9 +459,9 @@ func PurgeConfigAndSecret(clientSet kubernetes.Interface) {
 						delOpts := metav1.DeleteOptions{}
 						er := clientSet.CoreV1().ConfigMaps(label.NameSpace).Delete(context.TODO(), configName, delOpts)
 						if er != nil {
-							log.Println(fmt.Sprintf("Failed on parge configmap '%s'", configName), "Error", er, time.Now().UTC())
+							klog.Infof(fmt.Sprintf("Failed on parge configmap '%s'", configName), "Error", er, time.Now().UTC())
 						} else {
-							log.Println(fmt.Sprintf("config purged successfully '%s'", configName), time.Now().UTC())
+							klog.Infof(fmt.Sprintf("config purged successfully '%s'", configName), time.Now().UTC())
 						}
 					}
 				}
@@ -472,7 +472,7 @@ func PurgeConfigAndSecret(clientSet kubernetes.Interface) {
 			listOpts.LabelSelector = secretLabel
 			listSecret, er := clientSet.CoreV1().Secrets(label.NameSpace).List(context.TODO(), listOpts)
 			if er != nil {
-				log.Println("Failed on watching configmap label '%s'", label.ConfigMap, time.Now().UTC())
+				klog.Infof("Failed on watching configmap label '%s'", label.ConfigMap, time.Now().UTC())
 				continue
 			}
 			for _, secret := range listSecret.Items {
@@ -485,17 +485,17 @@ func PurgeConfigAndSecret(clientSet kubernetes.Interface) {
 				//getting all deployment with specific label
 				deploylist, er := clientSet.AppsV1().Deployments(label.NameSpace).List(context.TODO(), opts)
 				if er != nil {
-					log.Println(fmt.Sprintf("Failed on getting deployment list based on label '%s'", label.Secret), er, time.Now().UTC())
+					klog.Infof(fmt.Sprintf("Failed on getting deployment list based on label '%s'", label.Secret), er, time.Now().UTC())
 				}
 				for _, deployment := range deploylist.Items {
 					selector, err := metav1.LabelSelectorAsSelector(deployment.Spec.Selector)
 					if err != nil {
-						log.Println("Failed get selector from deployment %v", err, time.Now().UTC())
+						klog.Infof("Failed get selector from deployment %v", err, time.Now().UTC())
 					}
 					options := metav1.ListOptions{LabelSelector: selector.String()}
 					allRSs, err := clientSet.AppsV1().ReplicaSets(label.NameSpace).List(context.TODO(), options)
 					if err != nil {
-						log.Println(fmt.Sprintf("Failed on getting deployment list based on label '%s'", label.ConfigMap), err, time.Now().UTC())
+						klog.Infof(fmt.Sprintf("Failed on getting deployment list based on label '%s'", label.ConfigMap), err, time.Now().UTC())
 					}
 					for _, rs := range allRSs.Items {
 						volumes := rs.Spec.Template.Spec.Volumes
@@ -530,23 +530,23 @@ func PurgeConfigAndSecret(clientSet kubernetes.Interface) {
 				//getting all sts with specific label
 				stslist, er := clientSet.AppsV1().StatefulSets(label.NameSpace).List(context.TODO(), opts)
 				if er != nil {
-					log.Println(fmt.Sprintf("Failed on getting statefulset list based on label '%s'", label.ConfigMap), er, time.Now().UTC())
+					klog.Infof(fmt.Sprintf("Failed on getting statefulset list based on label '%s'", label.ConfigMap), er, time.Now().UTC())
 				}
 				for _, sts := range stslist.Items {
 					selector, err := metav1.LabelSelectorAsSelector(sts.Spec.Selector)
 					if err != nil {
-						log.Println("Failed get selector from deployment %v", err, time.Now().UTC())
+						klog.Infof("Failed get selector from deployment %v", err, time.Now().UTC())
 					}
 					options := metav1.ListOptions{LabelSelector: selector.String()}
 					allRevisions, err := clientSet.AppsV1().ControllerRevisions(label.NameSpace).List(context.TODO(), options)
 					if err != nil {
-						log.Println(fmt.Sprintf("Failed on getting sts list based on label '%s'", label.ConfigMap), err, time.Now().UTC())
+						klog.Infof(fmt.Sprintf("Failed on getting sts list based on label '%s'", label.ConfigMap), err, time.Now().UTC())
 					}
 					for _, rs := range allRevisions.Items {
 						stsRevision := appsv1.StatefulSet{}
 						er := json.Unmarshal(rs.Data.Raw, &stsRevision)
 						if er != nil {
-							log.Println("failed on unmarshal", er.Error(), time.Now().UTC())
+							klog.Infof("failed on unmarshal", er.Error(), time.Now().UTC())
 						}
 						volumes := stsRevision.Spec.Template.Spec.Volumes
 						for _, volume := range volumes {
@@ -583,9 +583,9 @@ func PurgeConfigAndSecret(clientSet kubernetes.Interface) {
 						delOpts := metav1.DeleteOptions{}
 						er := clientSet.CoreV1().Secrets(label.NameSpace).Delete(context.TODO(), secretName, delOpts)
 						if er != nil {
-							log.Println(fmt.Sprintf("Failed on parge configmap '%s'", secretName), "Error", er, time.Now().UTC())
+							klog.Infof(fmt.Sprintf("Failed on parge configmap '%s'", secretName), "Error", er, time.Now().UTC())
 						} else {
-							log.Println(fmt.Sprintf("config purged successfully '%s'", secretName), time.Now().UTC())
+							klog.Infof(fmt.Sprintf("config purged successfully '%s'", secretName), time.Now().UTC())
 						}
 					}
 				}
@@ -616,14 +616,14 @@ func StoreLabel(clientWatcher Watcher) error {
 	if err != nil {
 		fileNotfound = true
 		if errs := os.MkdirAll(path, 0755); errs != nil {
-			log.Println("Failed to create directory: ", errs)
+			klog.Infof("Failed to create directory: ", errs)
 			return errs
 		}
 
 	}
 	labelFile, errs := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if errs != nil {
-		log.Println("Failed to create file: ", errs.Error())
+		klog.Infof("Failed to create file: ", errs.Error())
 		return errs
 	}
 	if fileNotfound {
@@ -634,7 +634,7 @@ func StoreLabel(clientWatcher Watcher) error {
 		}
 		n2, errs := labelFile.Write(data)
 		if errs != nil {
-			log.Println("Failed to write in log file ", n2, errs, time.Now().UTC())
+			klog.Infof("Failed to write in log file ", n2, errs, time.Now().UTC())
 			return errs
 		}
 	} else {
@@ -642,7 +642,7 @@ func StoreLabel(clientWatcher Watcher) error {
 		if fi.Size() != 0 {
 			e := json.Unmarshal(file, &clientWatcherFile)
 			if e != nil {
-				log.Println("Failed on unmarshalling the file content ", e.Error(), time.Now().UTC())
+				klog.Infof("Failed on unmarshalling the file content ", e.Error(), time.Now().UTC())
 				return e
 			}
 		}
@@ -679,13 +679,13 @@ func StoreLabel(clientWatcher Watcher) error {
 		//create a new file add a file content
 		labelFile, errs := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if errs != nil {
-			log.Println("Failed to create file: ", errs, time.Now().UTC())
+			klog.Infof("Failed to create file: ", errs, time.Now().UTC())
 			return errs
 		}
 		fileData, _ := json.Marshal(clientWatcherFile)
 		n2, errs := labelFile.Write(fileData)
 		if errs != nil {
-			log.Println("Failed to write content to log file ", n2, errs, time.Now().UTC())
+			klog.Infof("Failed to write content to log file ", n2, errs, time.Now().UTC())
 			return errs
 		}
 

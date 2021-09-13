@@ -111,12 +111,12 @@ func (c *Controller) secretSyncHandler(key string) error {
 			klog.V(4).Infof("CustomSecret %s  Secret edited", name)
 			if reflect.DeepEqual(secret.ObjectMeta.Annotations, customSecret.Spec.SecretAnnotations) == false && reflect.DeepEqual(secret.Data, data) {
 				if len(secret.ObjectMeta.Annotations) == 0 && len(customSecret.Spec.SecretAnnotations) == 0 {
-					fmt.Println("secret annotation and custom secret annotation is empty")
+					klog.Infof("secret annotation and custom secret annotation is empty")
 					return nil
 				}
 			} else if reflect.DeepEqual(secret.Data, data) == false {
 				if len(secret.Data) == 0 && len(data) == 0 {
-					fmt.Println("secret data and customsecret data is empty")
+					klog.Infof("secret data and customsecret data is empty")
 					return nil
 				}
 			}
