@@ -14,7 +14,7 @@ In order to keep the deployments and statefulsets in sync with the ConfigMap and
 
 # Contribution and additional resources
 
-### Contribution
+## Contribution
 
 1. If you wish to contribute to configurator then check the issue tracker to see if you help out with any of them.
 2. If you notice a bug or have a useful feature in mind please raise an issue in the issue tracker so that the contributors can work on it and since it helps the community as a    whole (try labelling the issues so they get reviewed sooner).
@@ -28,7 +28,7 @@ In order to keep the deployments and statefulsets in sync with the ConfigMap and
 3. Make sure you build and test the changes before sending a pull request.
 4. Ensure the README is updated with any interface or architecture changes.
 
-### Additional resources
+## Additional resources
 
 1. Check out the RESOURCES file for links to configurator blog bosts and videos.
 2. Raise an issue if you want your blog post to be added to the file.
