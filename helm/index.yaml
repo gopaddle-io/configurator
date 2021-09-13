@@ -1,0 +1,14 @@
+apiVersion: v1
+entries:
+  configurator:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2021-08-24T19:00:00.915392362+05:30"
+    description: Helm chart for installing configurator CRDs & Custom Controller
+    digest: 63d1fa4baf7a2c04e568b6a332d7f019cae3a4e6190b063b7a1f85eac8c966e4
+    name: configurator
+    type: application
+    urls:
+    - https://gopaddle-io.github.io/configurator/helm/configurator-0.1.0.tgz
+    version: 0.1.0
+generated: "2021-08-24T19:00:00.914099342+05:30"

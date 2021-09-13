@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"flag"
 	"time"
 
 	configController "github.com/gopaddle-io/configurator/controller"
@@ -15,32 +15,46 @@ import (
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 
 	"k8s.io/klog"
 )
 
 func main() {
 
-	cfg, err := rest.InClusterConfig()
+	var kubeconfig *string
+	var cfg *rest.Config
+	var err error
+
+	kubeconfig = flag.String("kubeconfig", "", "Path to the kubeconfig file. If not specified, InClusterConfig will be used.")
+	flag.Parse()
+
+	if ( *kubeconfig != "" ) {
+		klog.Warningf("Using kubeconfig: %s", *kubeconfig)
+		cfg, err = clientcmd.BuildConfigFromFlags("", *kubeconfig)
+	} else {
+		cfg, err = rest.InClusterConfig()
+	}
+
 	if err != nil {
 		klog.Fatalf("Error building kubeconfig: %s", err.Error())
 	}
-
-	//trigger previous labels and configmaps
-	e := watcher.TriggerWatcher()
-	if e != nil {
-		fmt.Println("failed on triggering watcher for pre-existing labels", e, time.Now().UTC())
-	}
-	//purge unused configmaps and secrets
-	watcher.PurgeJob()
-
-	// set up signals so we handle the first shutdown signal gracefully
-	stopCh := signals.SetupSignalHandler()
 
 	clientSet, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
 		klog.Fatalf("Error building kubernetes clientset: %s", err.Error(), time.Now().UTC())
 	}
+
+	//trigger previous labels and configmaps
+	e := watcher.TriggerWatcher(clientSet)
+	if e != nil {
+		klog.Warningf("failed on triggering watcher for pre-existing labels", e, time.Now().UTC())
+	}
+	//purge unused configmaps and secrets
+	watcher.PurgeJob(clientSet)
+
+	// set up signals so we handle the first shutdown signal gracefully
+	stopCh := signals.SetupSignalHandler()
 
 	configuratorClientSet, err := clientset.NewForConfig(cfg)
 	if err != nil {

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"reflect"
 	"regexp"
 	"time"
@@ -316,14 +315,14 @@ func (c *Controller) processNextWorkItem() bool {
 		event := Event{}
 		json.Unmarshal([]byte(key), &event)
 		if event.Kind == "CustomConfigMap" {
-			log.Println("kind: CustomConfigMap Name of the resource ", event.NameAndNameSpace)
+			klog.Infof("kind: CustomConfigMap Name of the resource ", event.NameAndNameSpace)
 			if err := c.syncHandler(event.NameAndNameSpace); err != nil {
 				// Put the item back on the workqueue to handle any transient errors.
 				c.workqueue.AddRateLimited(key)
 				return fmt.Errorf("error syncing '%s': %s, requeuing", key, err.Error())
 			}
 		} else if event.Kind == "CustomSecret" {
-			log.Println("kind: CustomSecret Name of the resource ", event.NameAndNameSpace)
+			klog.Infof("kind: CustomSecret Name of the resource ", event.NameAndNameSpace)
 			if err := c.secretSyncHandler(event.NameAndNameSpace); err != nil {
 				// Put the item back on the workqueue to handle any transient errors.
 				c.workqueue.AddRateLimited(key)
@@ -403,7 +402,7 @@ func (c *Controller) syncHandler(key string) error {
 		configlabel := watcher.WatcherLabel{}
 		configlabel.NameSpace = customConfigmap.Namespace
 		configlabel.ConfigMap = customConfigmap.Spec.ConfigMapName
-		go watcher.StartWatcher(configlabel, cm.Name, "")
+		go watcher.StartWatcher(c.kubeclientset, configlabel, cm.Name, "")
 		//store label in file
 		arrConfiglabel := watcher.Watcher{}
 		arrConfiglabel.Labels = append(arrConfiglabel.Labels, configlabel)
@@ -445,7 +444,7 @@ func (c *Controller) syncHandler(key string) error {
 			configlabel := watcher.WatcherLabel{}
 			configlabel.NameSpace = customConfigmap.Namespace
 			configlabel.ConfigMap = customConfigmap.Spec.ConfigMapName
-			go watcher.StartWatcher(configlabel, configMap.Name, cm.Name)
+			go watcher.StartWatcher(c.kubeclientset, configlabel, configMap.Name, cm.Name)
 			//store label in file
 			arrConfiglabel := watcher.Watcher{}
 			arrConfiglabel.Labels = append(arrConfiglabel.Labels, configlabel)
