@@ -122,4 +122,4 @@ kubectl delete ccs -n <namespace>
 3. Ensure the README is updated with any interface or architecture changes.
 
 ## Maintainers
-Congurator is maintained by [gopaddle.io](https://gopaddle.io) team.
+Configurator is maintained by [gopaddle.io](https://gopaddle.io) team.
