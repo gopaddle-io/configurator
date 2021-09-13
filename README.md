@@ -21,7 +21,7 @@ In order to keep the deployments and statefulsets in sync with the ConfigMap and
 3. Create a separate feature branch for new enhancements you wish to add to Configurator.
 4. Join our discord community where we discuss open issues and help fellow contributors to contribute more easily.
 
-#### Pull requests
+####    Pull requests
 
 1. We follow the standard ‘Fork and Pull’ workflow.
 2. Fetch the latest code from master branch and resolve any conflicts before sending a pull request.
