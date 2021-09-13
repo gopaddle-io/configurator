@@ -6,11 +6,14 @@ ifndef DOCKER_IMAGE_TAG
   DOCKER_IMAGE_TAG=latest
 endif
 
+.PHONY: helm
+
 clean: clean-configurator
 build: build-configurator
 push: push-image
 deploy: deploy-configurator
-remove: remove-configurator
+remove: remove-configurator cleanup
+cleanup: cleanup-crds cleanup-ns
 
 clean-configurator: 
 	-rm -f configurator
@@ -27,11 +30,15 @@ deploy-configurator:
 
 remove-configurator:
 	-kubectl delete -f deploy/configurator-deployment.yaml
-	-kubectl delete -f deploy/crd-customConfigMap.yaml
-	-kubectl delete -f deploy/crd-customSecret.yaml
 	-kubectl delete -f deploy/configurator-clusterrolebinding.yaml
 	-kubectl delete -f deploy/configurator-clusterrole.yaml
 	-kubectl delete -f deploy/configurator-serviceaccount.yaml
+
+cleanup-crds:
+	-kubectl delete -f deploy/crd-customConfigMap.yaml
+	-kubectl delete -f deploy/crd-customSecret.yaml
+
+cleanup-ns:
 	-kubectl delete ns configurator
 
 build-configurator:
@@ -41,3 +48,7 @@ build-configurator:
 
 push-image:
 	-docker push ${DOCKER_IMAGE_REPO}:${DOCKER_IMAGE_TAG}
+
+helm:
+	cd helm && helm package ../helm-src/configurator
+	cd helm && helm repo index .
