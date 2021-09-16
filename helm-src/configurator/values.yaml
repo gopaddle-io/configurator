@@ -1,4 +1,21 @@
-image: gopaddle/configurator:latest
-namespace: configurator
-replicaCount: 1
+installCrds: true
+
+image:
+  repository: gopaddle/configurator
+
+  ## Defaults to .Chart.AppVersion
+  # tag: latest
+
+  ## Always because of `latest`.
+  ## This will likely change to IfNotPresent when releases are properly numbered.
+  pullPolicy: Always
+
 replicas: 1
+
+resources: {}
+  # limits:
+  #   cpu: 1
+  #   memory: 1Gi
+  # requests:
+  #   cpu: 5m
+  #   memory: 500Mi

@@ -3,7 +3,7 @@ kind: ClusterRole
 metadata:
   annotations:
     rbac.authorization.kubernetes.io/autoupdate: "true"
-  name: configurator
+  name: "{{ .Release.Name }}-configurator"
 rules:
   - apiGroups:
     - configurator.gopaddle.io

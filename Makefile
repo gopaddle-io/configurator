@@ -11,9 +11,9 @@ endif
 clean: clean-configurator
 build: build-configurator
 push: push-image
-deploy: deploy-configurator
+deploy: deploy-configurator deploy-crds
 remove: remove-configurator cleanup
-cleanup: cleanup-crds cleanup-ns
+cleanup: cleanup-crds
 
 clean-configurator: 
 	-rm -f configurator
@@ -24,9 +24,11 @@ deploy-configurator:
 	-kubectl apply -f deploy/configurator-serviceaccount.yaml
 	-kubectl apply -f deploy/configurator-clusterrole.yaml
 	-kubectl apply -f deploy/configurator-clusterrolebinding.yaml
+	-kubectl apply -f deploy/configurator-deployment.yaml
+
+deploy-crds:
 	-kubectl apply -f deploy/crd-customConfigMap.yaml
 	-kubectl apply -f deploy/crd-customSecret.yaml
-	-kubectl apply -f deploy/configurator-deployment.yaml
 
 remove-configurator:
 	-kubectl delete -f deploy/configurator-deployment.yaml
@@ -37,9 +39,6 @@ remove-configurator:
 cleanup-crds:
 	-kubectl delete -f deploy/crd-customConfigMap.yaml
 	-kubectl delete -f deploy/crd-customSecret.yaml
-
-cleanup-ns:
-	-kubectl delete ns configurator
 
 build-configurator:
 	-go mod vendor
@@ -52,3 +51,9 @@ push-image:
 helm:
 	cd helm && helm package ../helm-src/configurator
 	cd helm && helm repo index .
+
+helm-install:
+	-helm upgrade --install --create-namespace --namespace configurator configurator helm-src/configurator
+
+helm-uninstall:
+	-helm uninstall -n configurator configurator
