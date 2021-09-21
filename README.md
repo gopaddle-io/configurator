@@ -19,7 +19,7 @@ In order to keep the deployments and statefulsets in sync with the ConfigMap and
 1. If you wish to contribute to configurator then check the issue tracker to see if you help out with any of them.
 2. If you notice a bug or have a useful feature in mind please raise an issue in the issue tracker so that the contributors can work on it and since it helps the community as a    whole (try labelling the issues so they get reviewed sooner).
 3. Create a separate feature branch for new enhancements you wish to add to Configurator.
-4. Join our discord community where we discuss open issues and help fellow contributors to contribute more easily.
+4. Join our discord community where we discuss open issues and help newcomers to contribute more easily.
 ### Pull requests
 
   * We follow the standard ‘Fork and Pull’ workflow.
