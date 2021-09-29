@@ -1,0 +1,107 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  annotations:
+    rbac.authorization.kubernetes.io/autoupdate: "true"
+  name: "{{ .Release.Name }}-configurator"
+rules:
+  - apiGroups:
+    - configurator.gopaddle.io
+    resources:
+    - customsecrets
+    verbs:
+    - get
+    - list
+    - watch
+    - update
+    - create
+  - apiGroups:
+    - configurator.gopaddle.io
+    resources:
+    - customconfigmaps
+    verbs:
+    - get
+    - list
+    - watch
+    - update
+    - create
+  - apiGroups:
+    - apps
+    resources:
+    - deployments
+    verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
+  - apiGroups:
+    - apps
+    resources:
+    - statefulsets
+    verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
+  - apiGroups:
+    - ""
+    resources:
+    - secrets
+    verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
+  - apiGroups:
+    - ""
+    resources:
+    - configmaps
+    verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
+  - apiGroups:
+    - apps
+    - extensions
+    resources:
+    - replicasets
+    verbs:
+    - get
+    - list
+    - update
+    - watch
+  - apiGroups:
+    - apps
+    resources:
+    - controllerrevisions
+    verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
+  - apiGroups:
+    - ""
+    - events.k8s.io
+    resources:
+    - events
+    verbs:
+    - create
+    - patch
+    - update
+
