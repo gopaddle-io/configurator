@@ -1,10 +1,3 @@
----
-permalink: /license/
-title: "License"
-toc: false
-show_author: false
----
-
  Apache License
 ==============
 
