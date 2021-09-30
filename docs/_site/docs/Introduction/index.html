@@ -50,7 +50,7 @@
 
 
 
-  <meta property="article:published_time" content="2021-09-30T04:57:43+00:00">
+  <meta property="article:published_time" content="2021-09-30T06:02:39+00:00">
 
 
 
@@ -218,7 +218,7 @@
   <article class="page" itemscope itemtype="https://schema.org/CreativeWork">
     <meta itemprop="headline" content="Introduction">
     <meta itemprop="description" content="ConfiguratorConfigurator is a version control and a sync service that keeps Kubernetes ConfigMaps and Secrets in sync with the deployment. Configurator uses CRDs to create CustomConfigMaps and CustomSecrets that in turn create ConfigMaps and Secrets with a postfix. As and when a change is detected in the CustomConfigMap or CustomSecret, Configurator automaticatlly generates a new ConfigMap with a new postfix. This acts like a version control for the ConfigMaps.In order to keep the deployments and statefulsets in sync with the ConfigMap and Secret version, users must start with creating a CustomConfigMap as the first step. This creates a new ConfigMap with a postfix ie., first version. Users then have to reference the ConfigMap along with the postfix in their deployment and satefulset specifications. From them on, users can edit the CustomConfigMap directly. Any change in the CustomConfigMap will be automatically rolled out to all the deployments and statefulsets referencing the initial configMap version. A change in ConfigMap not only creates a new ConfigMap version, but also rolls out a new deployment version. This enables both rolling update and rollback of ConfigMaps in sync with the deployment versions.">
-    <meta itemprop="datePublished" content="2021-09-30T04:57:43+00:00">
+    
     
 
     <div class="page__inner-wrap">
@@ -247,8 +247,6 @@ In order to keep the deployments and statefulsets in sync with the ConfigMap and
 
 
         
-
-  <p class="page__date"><strong><i class="fas fa-fw fa-calendar-alt" aria-hidden="true"></i> Updated:</strong> <time datetime="2021-09-30T04:57:43+00:00">September 30, 2021</time></p>
 
 
       </footer>
