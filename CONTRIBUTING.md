@@ -1,13 +1,3 @@
----
-title: "Contributing"
-permalink: /contribute/contributing/
-toc: false  
-show_author: false
-sidebar:
-  nav: contribute
----
-
-
 ## Community
 
 Configurator has a [discord server]((https://discord.gg/dr24Z4BmP8)) where we discuss open issues and help newcomers to contribute more easily. Feautre requests and rearchitectural proposals are discussed here before making version updates. We are still a growing community and people of all skill levels are welcomed to join and contribute in whichever way possible.
