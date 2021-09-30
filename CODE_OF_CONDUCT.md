@@ -1,12 +1,3 @@
----
-permalink: /contribute/Code-Of-Conduct/
-title: "Contributor Covenant Code of Conduct"
-toc: false
-show_author: false
-sidebar:
-  nav: contribute
----
-
 ## Our Pledge
 
 We as members, contributors, and leaders pledge to make participation in our
