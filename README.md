@@ -15,7 +15,7 @@ In order to keep the deployments and statefulsets in sync with the ConfigMap and
 # Contributing
 Check the [CONTRIBUTING.md](/CONTRIBUTING.md) file to start contributing to the project
 
-Check out the [Configurator website](https://localhost:4000) for quick and easy navigation of all documentaion and additional resources. 
+Check out the [Configurator website](https://gopaddle-io.github.io/configurator/) for quick and easy navigation of all documentaion and additional resources. 
 
 Join the community at our [discord server]((https://discord.gg/dr24Z4BmP8))
 
