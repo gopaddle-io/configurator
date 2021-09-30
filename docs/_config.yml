@@ -10,7 +10,7 @@ subtitle                 : "Sync Service for ConfigMaps"
 name                     : &name "Adeesh Devanand" # &name is a YAML anchor which can be *referenced later
 description              : &description "A sync and versioning service for Kubernetes ConfigMaps."
 url                      : https://github.com/gopaddle-io # the base hostname & protocol for your site e.g. "https://mmistakes.github.io"
-baseurl                  : "/configurator/" # the subpath of your site, e.g. "/blog"
+baseurl                  : "/configurator" # the subpath of your site, e.g. "/blog"
 repository               : "gopaddle-io/configurator"
 teaser                   : "/assets/images/configurator.png"
 logo                     : "/assets/images/configurator.png"
@@ -231,6 +231,7 @@ plugins:
   - jekyll-paginate
   - jekyll-sitemap
   - jekyll-gist
+  - jekyll-seo-tag
 #  - jekyll-feed
   - jemoji
   - jekyll-include-cache
