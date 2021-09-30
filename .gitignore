@@ -1,4 +1,6 @@
 vendor/
-labelConfig/*
+labelconfig/*
 main
-/configurator
+configurator
+.history
+.vscode
