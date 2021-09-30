@@ -1,0 +1,57 @@
+# example navigation
+foo:
+  - title: "Parent Link 1"
+    url: /parent-1-page-url/
+    children:
+      - title: "Child Link 1"
+        url: /child-1-page-url/
+      - title: "Child Link 2"
+        url: /child-2-page-url/
+  - title: "Parent Link 2"
+    url: /parent-2-page-url/
+    children:
+      - title: "Child Link 1"
+        url: /child-1-page-url/
+      - title: "Child Link 2"
+        url: /child-2-page-url/
+      - title: "Child Link 3"
+        url: /child-3-page-url/
+
+
+# main links
+main:
+  - title: "Quick-Start Guide"
+    url: /Quick-Start-Guide/
+  - title: "Contribution"
+    url: /contribute/contributing/
+  - title: "Posts"
+    url: /year-archive/
+  - title: "Documentation"
+    url: /docs/Introduction/
+  - title: "License"
+    url: /license/
+
+
+# documentation links
+docs:
+    - title: "Introduction"
+      url: /docs/Introduction/
+    - title: "Architecture"
+      url: /docs/Architecture/
+
+# contribution links
+contribute:
+  - title: "Contributing"
+    url: /contribute/contributing/
+  - title: "Code of Conduct"
+    url: /contribute/Code-Of-Conduct/
+  - title: "Weekly Meetings"
+    children:
+      - title: "2021-09-29"
+        url: /contribute/meetings/2021-09-29/
+      - title: "2021-09-22"
+        url: /contribute/meetings/2021-09-22/
+      - title: "2021-09-15"
+        url: /contribute/meetings/2021-09-15/
+      - title: "2021-09-08"
+        url: /contribute/meetings/2021-09-08/

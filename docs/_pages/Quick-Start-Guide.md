@@ -1,25 +1,13 @@
-<img src="https://gopaddle-marketing.s3.ap-southeast-2.amazonaws.com/Configurator-sync-service.png" width="50%">
+---
+permalink: /Quick-Start-Guide/
+title: "Quick-Start-Guide"
+excerpt: "Building and Deploying Configurator"
+toc: true
+show_author: false
+---
 
-[![StackShare](http://img.shields.io/badge/tech-stack-0690fa.svg?style=flat)](https://stackshare.io/gopaddleio/gopaddle)  [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)  [![Twitter URL](https://img.shields.io/twitter/url?label=%40configuratork8s&style=social&url=https%3A%2F%2Ftwitter.com%2Fconfiguratork8s)](https://twitter.com/configuratork8s)
-
-[![Discord](https://discordapp.com/api/guilds/864856848279666730/widget.png?style=banner2)](https://discord.gg/dr24Z4BmP8)
-
-# Configurator
-Configurator is a version control and a sync service that keeps Kubernetes ConfigMaps and Secrets in sync with the deployment. Configurator uses CRDs to create CustomConfigMaps and CustomSecrets that in turn create ConfigMaps and Secrets with a postfix. As and when a change is detected in the CustomConfigMap or CustomSecret, Configurator automaticatlly generates a new ConfigMap with a new postfix. This acts like a version control for the ConfigMaps.
-In order to keep the deployments and statefulsets in sync with the ConfigMap and Secret version, users must start with creating a CustomConfigMap as the first step. This creates a new ConfigMap with a postfix ie., first version. Users then have to reference the ConfigMap along with the postfix in their deployment and satefulset specifications. From them on, users can edit the CustomConfigMap directly. Any change in the CustomConfigMap will be automatically rolled out to all the deployments and statefulsets referencing the initial configMap version. A change in ConfigMap not only creates a new ConfigMap version, but also rolls out a new deployment version. This enables both rolling update and rollback of ConfigMaps in sync with the deployment versions.
-
-
-# Supported Versions
+### Supported Versions
   - K8s 1.16+
-
-# Contributing
-Check the [CONTRIBUTING.md](/CONTRIBUTING.md) file to start contributing to the project
-
-Check out the [Configurator website](https://localhost:4000) for quick and easy navigation of all documentaion and additional resources. 
-
-Join the community at our [discord server]((https://discord.gg/dr24Z4BmP8))
-
-# How to use Configurator.
 
 ### Building and Deploying Configurator
 Build the source code and the docker image for Configurator. Push the image to registry and deploy configurator in the cluster.
@@ -120,10 +108,6 @@ kubectl delete ccs -n <namespace>
 
 ### Architecture
 <img src="https://gopaddle-marketing.s3.ap-southeast-2.amazonaws.com/configurartor-architecture.png">
-
-### License 
-
-[Apache License Version 2.0](/LICENSE.md)
 
 ### Pull Requests
 1. Fetch the latest code from master branch and resolve any conflicts before sending a pull request.

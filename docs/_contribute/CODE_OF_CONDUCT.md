@@ -1,10 +1,13 @@
 ---
 permalink: /contribute/Code-Of-Conduct/
 title: "Contributor Covenant Code of Conduct"
-toc: false
-show_author: false
+layout: single
+read_time: false
+author_profile: false
+share: false
+comments: false
 sidebar:
-  nav: contribute
+  nav: "contribute"
 ---
 
 ## Our Pledge

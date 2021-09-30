@@ -1,0 +1,709 @@
+<!doctype html>
+<!--
+  Minimal Mistakes Jekyll Theme 4.24.0 by Michael Rose
+  Copyright 2013-2020 Michael Rose - mademistakes.com | @mmistakes
+  Free for personal and commercial use under the MIT license
+  https://github.com/mmistakes/minimal-mistakes/blob/master/LICENSE
+-->
+<html lang="en" class="no-js">
+  <head>
+    <meta charset="utf-8">
+
+<!-- begin _includes/seo.html --><title>Using Helm Charts with Configurator - Configurator</title>
+<meta name="description" content="This blog will focus on the following motives:    Installing Configurator using the helm chart. *   Customizing Configurator helm chart based on requirements. *   Contributing back to the Configurator project.">
+
+
+  <meta name="author" content="Ashvin Kumar">
+  
+  <meta property="article:author" content="Ashvin Kumar">
+  
+
+
+<meta property="og:type" content="article">
+<meta property="og:locale" content="en_US">
+<meta property="og:site_name" content="Configurator">
+<meta property="og:title" content="Using Helm Charts with Configurator">
+<meta property="og:url" content="http://localhost:4000/configurator/Using-Helm-Charts-with-Configurator/">
+
+
+  <meta property="og:description" content="This blog will focus on the following motives:    Installing Configurator using the helm chart. *   Customizing Configurator helm chart based on requirements. *   Contributing back to the Configurator project.">
+
+
+
+  <meta property="og:image" content="http://localhost:4000/configurator/assets/images/configurator.png">
+
+
+
+  <meta name="twitter:site" content="@configuratork8s">
+  <meta name="twitter:title" content="Using Helm Charts with Configurator">
+  <meta name="twitter:description" content="This blog will focus on the following motives:    Installing Configurator using the helm chart. *   Customizing Configurator helm chart based on requirements. *   Contributing back to the Configurator project.">
+  <meta name="twitter:url" content="http://localhost:4000/configurator/Using-Helm-Charts-with-Configurator/">
+
+  
+    <meta name="twitter:card" content="summary">
+    
+      <meta name="twitter:image" content="http://localhost:4000/configurator/assets/images/configurator.png">
+    
+  
+
+  
+
+
+
+  <meta property="article:published_time" content="2021-09-08T00:00:00+00:00">
+
+
+
+  <meta property="article:modified_time" content="2021-09-08T20:00:58+00:00">
+
+
+
+
+<link rel="canonical" href="http://localhost:4000/configurator/Using-Helm-Charts-with-Configurator/">
+
+
+
+
+<script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    
+      "@type": "Person",
+      "name": "Adeesh Devanand",
+      "url": "http://localhost:4000/configurator/",
+      "sameAs": ["https://twitter.com/confuguratork8s"]
+    
+  }
+</script>
+
+
+  <meta name="google-site-verification" content="UQj93ERU9zgECodaaXgVpkjrFn9UrDMEzVamacSoQ8Y" />
+
+
+
+
+
+
+<!-- end _includes/seo.html -->
+
+
+
+  <link href="/configurator/feed.xml" type="application/atom+xml" rel="alternate" title="Configurator Feed">
+
+
+<!-- https://t.co/dKP3o1e -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script>
+  document.documentElement.className = document.documentElement.className.replace(/\bno-js\b/g, '') + ' js ';
+</script>
+
+<!-- For all browsers -->
+<link rel="stylesheet" href="/configurator/assets/css/main.css">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5/css/all.min.css"></noscript>
+
+
+
+    <!-- start custom head snippets -->
+
+<!-- insert favicons. use https://realfavicongenerator.net/ -->
+
+<!-- end custom head snippets -->
+
+  </head>
+
+  <body class="layout--single">
+    <nav class="skip-links">
+  <ul>
+    <li><a href="#site-nav" class="screen-reader-shortcut">Skip to primary navigation</a></li>
+    <li><a href="#main" class="screen-reader-shortcut">Skip to content</a></li>
+    <li><a href="#footer" class="screen-reader-shortcut">Skip to footer</a></li>
+  </ul>
+</nav>
+
+    <!--[if lt IE 9]>
+<div class="notice--danger align-center" style="margin: 0;">You are using an <strong>outdated</strong> browser. Please <a href="https://browsehappy.com/">upgrade your browser</a> to improve your experience.</div>
+<![endif]-->
+
+    
+
+<div class="masthead">
+  <div class="masthead__inner-wrap">
+    <div class="masthead__menu">
+      <nav id="site-nav" class="greedy-nav">
+        
+          <a class="site-logo" href="/configurator/"><img src="/configurator/assets/images/configurator.png" alt="Configurator"></a>
+        
+        <a class="site-title" href="/configurator/">
+          Configurator
+          <span class="site-subtitle">Sync Service for ConfigMaps</span>
+        </a>
+        <ul class="visible-links"><li class="masthead__menu-item">
+              <a href="/configurator/Quick-Start-Guide/">Quick-Start Guide</a>
+            </li><li class="masthead__menu-item">
+              <a href="/configurator/contribute/contributing/">Contribution</a>
+            </li><li class="masthead__menu-item">
+              <a href="/configurator/year-archive/">Posts</a>
+            </li><li class="masthead__menu-item">
+              <a href="/configurator/docs/Introduction/">Documentation</a>
+            </li><li class="masthead__menu-item">
+              <a href="/configurator/license/">License</a>
+            </li></ul>
+        
+        <button class="search__toggle" type="button">
+          <span class="visually-hidden">Toggle search</span>
+          <i class="fas fa-search"></i>
+        </button>
+        
+        <button class="greedy-nav__toggle hidden" type="button">
+          <span class="visually-hidden">Toggle menu</span>
+          <div class="navicon"></div>
+        </button>
+        <ul class="hidden-links hidden"></ul>
+      </nav>
+    </div>
+  </div>
+</div>
+
+
+    <div class="initial-content">
+      
+
+
+
+<div id="main" role="main">
+  
+  <div class="sidebar sticky">
+  
+
+
+<div itemscope itemtype="https://schema.org/Person">
+
+  
+    <div class="author__avatar">
+      
+        <img src="/configurator/assets/images/Ashvin.png" alt="Ashvin Kumar" itemprop="image">
+      
+    </div>
+  
+
+  <div class="author__content">
+    
+      <h3 class="author__name" itemprop="name">Ashvin Kumar</h3>
+    
+    
+      <div class="author__bio" itemprop="description">
+        <p>Open Source Contributor @ Akraino - LFEdge &amp; gopaddle’s Sail</p>
+
+      </div>
+    
+  </div>
+
+  <div class="author__urls-wrapper">
+    <button class="btn btn--inverse">Follow</button>
+    <ul class="author__urls social-icons">
+      
+
+      
+        
+          
+            <li><a href="https://www.linkedin.com/in/ashvin-kumar-2689341b2/" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-linkedin-square" aria-hidden="true"></i><span class="label">Linked In</span></a></li>
+          
+        
+          
+            <li><a href="https://twitter.com/ashvin_kumar98" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-twitter-square" aria-hidden="true"></i><span class="label">Twitter</span></a></li>
+          
+        
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <!--
+  <li>
+    <a href="http://link-to-whatever-social-network.com/user/" itemprop="sameAs" rel="nofollow noopener noreferrer">
+      <i class="fas fa-fw" aria-hidden="true"></i> Custom Social Profile Link
+    </a>
+  </li>
+-->
+    </ul>
+  </div>
+</div>
+
+  
+  </div>
+
+
+
+  <article class="page" itemscope itemtype="https://schema.org/CreativeWork">
+    <meta itemprop="headline" content="Using Helm Charts with Configurator">
+    <meta itemprop="description" content="This blog will focus on the following motives:  Installing Configurator using the helm chart. *   Customizing Configurator helm chart based on requirements. *   Contributing back to the Configurator project.">
+    <meta itemprop="datePublished" content="2021-09-08T00:00:00+00:00">
+    <meta itemprop="dateModified" content="2021-09-08T20:00:58+00:00">
+
+    <div class="page__inner-wrap">
+      
+        <header>
+          <h1 id="page-title" class="page__title" itemprop="headline">Using Helm Charts with Configurator
+</h1>
+          
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2021-09-08T00:00:00+00:00">September 8, 2021</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-clock" aria-hidden="true"></i>
+        
+          3 minute read
+        
+      </span>
+    
+  </p>
+
+
+        </header>
+      
+
+      <section class="page__content" itemprop="text">
+        
+        <p>This blog will focus on the following motives:</p>
+
+<ul>
+  <li>Installing Configurator using the helm chart.</li>
+  <li>Customizing Configurator helm chart based on requirements.</li>
+  <li>Contributing back to the Configurator project.</li>
+</ul>
+
+<p><img src="https://i1.wp.com/blog.gopaddle.io/wp-content/uploads/2021/09/Screenshot-2021-09-08-at-5.47.44-PM.png?fit=2560%2C1282&amp;ssl=1" alt="" /></p>
+
+<p><strong>System Requirements</strong></p>
+
+<p>Make sure that you have installed helm in your machine and you are connected to a Kubernetes cluster. The chart is qualified for helm version &gt; v3 &amp; Kube version v1.20.8. Follow the documentation from the link to install helm: <a href="https://helm.sh/docs/helm/helm_version/">https://helm.sh/docs/helm/helm_version/</a></p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>helm versionversion.BuildInfo{Version:"v3.0.2", GitCommit:"19e47ee3283ae98139d98460de796c1be1e3975f", GitTreeState:"clean", GoVersion:"go1.13.5"}
+</code></pre></div></div>
+
+<p><strong>Installing Configurator using helm chart</strong></p>
+
+<p>Follow the below steps to directly deploy the Configurator helm package. Make sure that a namespace ‘configurator’ already exists in your cluster. If not, create a namespace with the following command.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl create namespace configurator
+</code></pre></div></div>
+
+<p>Add the configurator helm repository, by executing the following command :</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>helm repo add gopaddle_configurator https://gopaddle-io.github.io/configurator/helm/
+</code></pre></div></div>
+
+<p>Once the command is executed, verify the repository by running the command below. You must see the configurator_helm repo in the list.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>helm repo list
+</code></pre></div></div>
+
+<p>The output must be similar to this:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>NAME                   URL
+hashicorp              https://helm.releases.hashicorp.com
+gopaddle_configurator  https://gopaddleio.github.io/configurator/helm/
+</code></pre></div></div>
+
+<p>Once you’ve verified the repo, install the helm chart with the following command: <em>helm install &lt;release_name&gt; &lt;repo_name/chart_name&gt;</em></p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>helm install release1.0.0 gopaddle_configurator/configurator
+</code></pre></div></div>
+
+<p>This installs the Configurator CRDs and the controller in the ‘configurator’ namespace. After you install the helm chart, verify by listing the resources in the corresponding namespace using the following commands.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get pods -n configuratorkubectl get crds -n configuratorkubectl get serviceaccounts -n configuratorkubectl get clusterrolebindings -n configurator
+</code></pre></div></div>
+
+<p>The configurator is now ready for use. Here is a reference blog on how to use configurator with the deployments: <a href="https://blog.gopaddle.io/2021/04/01/strange-things-you-never-knew-about-kubernetes-configmaps-on-day-one/">https://blog.gopaddle.io/2021/04/01/strange-things-you-never-knew-about-kubernetes-configmaps-on-day-one/</a></p>
+
+<p><strong>Customizing Configurator helm chart based on requirements</strong></p>
+
+<p>Sometimes, you may wish to change the Configurator image name, Docker repository, image tag or even include other service charts along with Configurator. Modifying the Configurator helm is pretty straightforward. Make sure you’ve cloned the Configurator GitHub project before proceeding with the next steps.</p>
+
+<p>To clone the project, run the following command:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git clone https://github.com/gopaddle-io/configurator.git
+</code></pre></div></div>
+
+<p>The helm package needs to be unpacked to modify the helm chart. The zip file will be present at the path configurator/helm in the Configurator project. Choose this option when you want to modify the helm chart configuration. Unzip the file with the following command.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>tar -zxvf &lt;path to .tgz file&gt;
+</code></pre></div></div>
+
+<p>This will extract the contents of the chart in a folder. Once you extract, the helm chart’s file system tree will look like this:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>configurator├── charts├── Chart.yaml├── crds│   ├── crd-customConfigMap.yaml│   └── crd-customSecret.yaml├── templates│   ├── configurator-clusterrolebinding.yaml│   ├── configurator-clusterrole.yaml│   ├── configurator-deployment.yaml│   ├── configurator-serviceaccount.yaml│   └── tests└── values.yaml
+</code></pre></div></div>
+
+<p>The crds directory contains the custom resource definition files — <em>crd-customConfigMap.yaml</em> &amp; <em>crd-customSecret.yaml</em>. The templates directory contains the resource’s yaml files, in our case, it contains the roles and role bindings and the configurator service definitions. The charts directory is empty by default. This folder can be used to add your application charts that use Configurator Custom Resource. The <em>Chart.yaml</em> file contains information about the helm, like the chart’s name, description, type etc.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code># Default values for my_chart.# This is a YAML-formatted file.# Declare variables to be passed into your templates.replicaCount: 1replicas: 1namespace: configuratorimage: gopaddle/configurator:latest
+</code></pre></div></div>
+
+<p>You can edit the <em>values.yaml</em> file to your requirements like changing the namespace, replica_count or the image name, docker repository or the image tag. Make sure that the namespace used in the <em>values.yaml</em> exists in the cluster before you do a helm install. Once the necessary configuration is done, execute the following command to install the charts into your cluster: <em>helm install &lt;release_name&gt; &lt;chart_name&gt;</em></p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>helm install release1.0.0 configurator
+</code></pre></div></div>
+
+<p>This will install the helm chart inside the cluster with the new configurations.</p>
+
+<p><strong>Contributing back to the configurator project</strong></p>
+
+<p>To contribute the helm changes back to the Configurator project, you need to package the helm chart with the following command :</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>helm package &lt;path to helm chart&gt;
+</code></pre></div></div>
+
+<p>This command will package the charts to a .tgz file. After packaging the helm, you need to give a pull request for code review &amp; merge.</p>
+
+<p>You can take a look at this open-source project @ <a href="https://github.com/gopaddle-io/configurator.git">https://github.com/gopaddle-io/configurator.git</a>.</p>
+
+<p>For any queries on how to use or how to contribute to the project, you can reach us on our discord server — <a href="https://discord.gg/dr24Z4BmP8">https://discord.gg/dr24Z4BmP8</a></p>
+
+<p>Image courtesy — <a href="https://www.freepik.com/vectors/technology">https://www.freepik.com/vectors/technology</a> Technology vector created by stories — <a href="http://www.freepik.com/">www.freepik.com</a></p>
+
+        
+      </section>
+
+      <footer class="page__meta">
+        
+        
+  
+
+
+  
+
+  <p class="page__taxonomy">
+    <strong><i class="fas fa-fw fa-tags" aria-hidden="true"></i> Tags: </strong>
+    <span itemprop="keywords">
+    
+      <a href="/configurator/tags/#installation" class="page__taxonomy-item" rel="tag">installation</a>
+    
+    </span>
+  </p>
+
+
+
+
+        
+
+  <p class="page__date"><strong><i class="fas fa-fw fa-calendar-alt" aria-hidden="true"></i> Updated:</strong> <time datetime="2021-09-08">September 8, 2021</time></p>
+
+
+      </footer>
+
+      
+
+      
+  <nav class="pagination">
+    
+      <a href="/configurator/Building-Configurator-with-custom-Docker-repo/" class="pagination--pager" title="Building Configurator with custom Docker repo
+">Previous</a>
+    
+    
+      <a href="#" class="pagination--pager disabled">Next</a>
+    
+  </nav>
+
+    </div>
+
+    
+  </article>
+
+  
+  
+    <div class="page__related">
+      <div align="center" style="margin: 1em 0;">
+        <ins class="adsbygoogle"
+              style="display:block; border-bottom: initial;"
+              data-ad-client="ca-pub-7328585512091257"
+              data-ad-slot="3049671934"
+              data-ad-format="auto"
+              data-full-width-responsive="true"></ins>
+      </div>
+      <h2 class="page__related-title">You May Also Enjoy</h2>
+      <div class="grid__wrapper">
+        
+          
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/configurator/assets/images/configurator.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/configurator/Building-Configurator-with-custom-Docker-repo/" rel="permalink">Building Configurator with custom Docker repo
+</a>
+      
+    </h2>
+    
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2021-08-31T00:00:00+00:00">August 31, 2021</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          5 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt" itemprop="description">In this blog, I would like to introduce you to the steps for using custom Docker repository while building Configurator.
+
+</p>
+  </article>
+</div>
+
+        
+          
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/configurator/assets/images/configurator.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/configurator/An-Introduction-to-Configurator/" rel="permalink">An Introduction To Configurator
+</a>
+      
+    </h2>
+    
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2021-08-04T00:00:00+00:00">August 4, 2021</time>
+      </span>
+    
+
+    
+
+    
+  </p>
+
+
+    <p class="archive__item-excerpt" itemprop="description">Problem statement and solution for ConfigMap versioning and sync …
+</p>
+  </article>
+</div>
+
+        
+          
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/configurator/assets/images/configurator.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/configurator/Strange-things-you-never-knew-about-ConfigMaps/" rel="permalink">Strange things you never knew about ConfigMaps
+</a>
+      
+    </h2>
+    
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2021-04-01T00:00:00+00:00">April 1, 2021</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          8 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt" itemprop="description">Deploying on Kubernetes is one complex task, but dealing with surprises during maintenance is another. I can talk from my own experience of maintaining our g...</p>
+  </article>
+</div>
+
+        
+      </div>
+    </div>
+  
+  
+</div>
+
+      <div align="center" style="margin: 1em 0;">
+        <ins class="adsbygoogle"
+             style="display:block; border-bottom: initial;"
+             data-ad-client="ca-pub-7328585512091257"
+             data-ad-slot="3049671934"
+             data-ad-format="auto"
+             data-full-width-responsive="true"></ins>
+      </div>
+    </div>
+
+    
+      <div class="search-content">
+        <div class="search-content__inner-wrap"><form class="search-content__form" onkeydown="return event.key != 'Enter';">
+    <label class="sr-only" for="search">
+      Enter your search term...
+    </label>
+    <input type="search" id="search" class="search-input" tabindex="-1" placeholder="Enter your search term..." />
+  </form>
+  <div id="results" class="results"></div></div>
+
+      </div>
+    
+
+    <div class="page__footer">
+      <footer>
+        <!-- start custom footer snippets -->
+
+<!-- end custom footer snippets -->
+        <div class="page__footer-follow">
+  <ul class="social-icons">
+    
+
+    
+
+    
+      <li><a href="/configurator/feed.xml"><i class="fas fa-fw fa-rss-square" aria-hidden="true"></i> Feed</a></li>
+    
+  </ul>
+</div>
+
+<div class="page__footer-copyright">&copy; 2021 Adeesh Devanand. Powered by <a href="https://jekyllrb.com" rel="nofollow">Jekyll</a> &amp; <a href="https://mademistakes.com/work/minimal-mistakes-jekyll-theme/" rel="nofollow">Minimal Mistakes</a>.</div>
+
+      </footer>
+    </div>
+
+    
+  <script src="/configurator/assets/js/main.min.js"></script>
+
+
+
+
+<script src="/configurator/assets/js/lunr/lunr.min.js"></script>
+<script src="/configurator/assets/js/lunr/lunr-store.js"></script>
+<script src="/configurator/assets/js/lunr/lunr-en.js"></script>
+
+
+
+
+
+
+
+
+    <style>
+      .google-auto-placed {
+        margin: 2em auto;
+      }
+    </style>
+    <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+    <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+
+  </body>
+</html>

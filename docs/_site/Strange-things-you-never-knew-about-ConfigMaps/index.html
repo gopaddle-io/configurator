@@ -1,0 +1,862 @@
+<!doctype html>
+<!--
+  Minimal Mistakes Jekyll Theme 4.24.0 by Michael Rose
+  Copyright 2013-2020 Michael Rose - mademistakes.com | @mmistakes
+  Free for personal and commercial use under the MIT license
+  https://github.com/mmistakes/minimal-mistakes/blob/master/LICENSE
+-->
+<html lang="en" class="no-js">
+  <head>
+    <meta charset="utf-8">
+
+<!-- begin _includes/seo.html --><title>Strange things you never knew about ConfigMaps - Configurator</title>
+<meta name="description" content="Deploying on Kubernetes is one complex task, but dealing with surprises during maintenance is another. I can talk from my own experience of maintaining our gopaddle platform deployments on Kubernetes for more than a year now. Even with careful planning and collective knowledge from within the team, there are still hidden challenges in keeping the deployments intact. We get to learn those hidden challenges only by running the production systems on kubernetes for a while. This blog is one such wisdom we learnt. I would like to share our experience with ConfigMaps and what solution we built (open source) to overcome some trouble with ConfigMaps. For the rest of the blog, I am going to be focusing on ConfigMaps, but secrets also have the same set of challenges. Though I have referenced deployments through out the blog, the given scenario and solution exists for kubernetes secrets as well.">
+
+
+  <meta name="author" content="Renugadevi B">
+  
+  <meta property="article:author" content="Renugadevi B">
+  
+
+
+<meta property="og:type" content="article">
+<meta property="og:locale" content="en_US">
+<meta property="og:site_name" content="Configurator">
+<meta property="og:title" content="Strange things you never knew about ConfigMaps">
+<meta property="og:url" content="http://localhost:4000/configurator/Strange-things-you-never-knew-about-ConfigMaps/">
+
+
+  <meta property="og:description" content="Deploying on Kubernetes is one complex task, but dealing with surprises during maintenance is another. I can talk from my own experience of maintaining our gopaddle platform deployments on Kubernetes for more than a year now. Even with careful planning and collective knowledge from within the team, there are still hidden challenges in keeping the deployments intact. We get to learn those hidden challenges only by running the production systems on kubernetes for a while. This blog is one such wisdom we learnt. I would like to share our experience with ConfigMaps and what solution we built (open source) to overcome some trouble with ConfigMaps. For the rest of the blog, I am going to be focusing on ConfigMaps, but secrets also have the same set of challenges. Though I have referenced deployments through out the blog, the given scenario and solution exists for kubernetes secrets as well.">
+
+
+
+  <meta property="og:image" content="http://localhost:4000/configurator/assets/images/configurator.png">
+
+
+
+  <meta name="twitter:site" content="@configuratork8s">
+  <meta name="twitter:title" content="Strange things you never knew about ConfigMaps">
+  <meta name="twitter:description" content="Deploying on Kubernetes is one complex task, but dealing with surprises during maintenance is another. I can talk from my own experience of maintaining our gopaddle platform deployments on Kubernetes for more than a year now. Even with careful planning and collective knowledge from within the team, there are still hidden challenges in keeping the deployments intact. We get to learn those hidden challenges only by running the production systems on kubernetes for a while. This blog is one such wisdom we learnt. I would like to share our experience with ConfigMaps and what solution we built (open source) to overcome some trouble with ConfigMaps. For the rest of the blog, I am going to be focusing on ConfigMaps, but secrets also have the same set of challenges. Though I have referenced deployments through out the blog, the given scenario and solution exists for kubernetes secrets as well.">
+  <meta name="twitter:url" content="http://localhost:4000/configurator/Strange-things-you-never-knew-about-ConfigMaps/">
+
+  
+    <meta name="twitter:card" content="summary">
+    
+      <meta name="twitter:image" content="http://localhost:4000/configurator/assets/images/configurator.png">
+    
+  
+
+  
+
+
+
+  <meta property="article:published_time" content="2021-04-01T00:00:00+00:00">
+
+
+
+  <meta property="article:modified_time" content="2021-04-01T20:00:58+00:00">
+
+
+
+
+<link rel="canonical" href="http://localhost:4000/configurator/Strange-things-you-never-knew-about-ConfigMaps/">
+
+
+
+
+<script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    
+      "@type": "Person",
+      "name": "Adeesh Devanand",
+      "url": "http://localhost:4000/configurator/",
+      "sameAs": ["https://twitter.com/confuguratork8s"]
+    
+  }
+</script>
+
+
+  <meta name="google-site-verification" content="UQj93ERU9zgECodaaXgVpkjrFn9UrDMEzVamacSoQ8Y" />
+
+
+
+
+
+
+<!-- end _includes/seo.html -->
+
+
+
+  <link href="/configurator/feed.xml" type="application/atom+xml" rel="alternate" title="Configurator Feed">
+
+
+<!-- https://t.co/dKP3o1e -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script>
+  document.documentElement.className = document.documentElement.className.replace(/\bno-js\b/g, '') + ' js ';
+</script>
+
+<!-- For all browsers -->
+<link rel="stylesheet" href="/configurator/assets/css/main.css">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5/css/all.min.css"></noscript>
+
+
+
+    <!-- start custom head snippets -->
+
+<!-- insert favicons. use https://realfavicongenerator.net/ -->
+
+<!-- end custom head snippets -->
+
+  </head>
+
+  <body class="layout--single">
+    <nav class="skip-links">
+  <ul>
+    <li><a href="#site-nav" class="screen-reader-shortcut">Skip to primary navigation</a></li>
+    <li><a href="#main" class="screen-reader-shortcut">Skip to content</a></li>
+    <li><a href="#footer" class="screen-reader-shortcut">Skip to footer</a></li>
+  </ul>
+</nav>
+
+    <!--[if lt IE 9]>
+<div class="notice--danger align-center" style="margin: 0;">You are using an <strong>outdated</strong> browser. Please <a href="https://browsehappy.com/">upgrade your browser</a> to improve your experience.</div>
+<![endif]-->
+
+    
+
+<div class="masthead">
+  <div class="masthead__inner-wrap">
+    <div class="masthead__menu">
+      <nav id="site-nav" class="greedy-nav">
+        
+          <a class="site-logo" href="/configurator/"><img src="/configurator/assets/images/configurator.png" alt="Configurator"></a>
+        
+        <a class="site-title" href="/configurator/">
+          Configurator
+          <span class="site-subtitle">Sync Service for ConfigMaps</span>
+        </a>
+        <ul class="visible-links"><li class="masthead__menu-item">
+              <a href="/configurator/Quick-Start-Guide/">Quick-Start Guide</a>
+            </li><li class="masthead__menu-item">
+              <a href="/configurator/contribute/contributing/">Contribution</a>
+            </li><li class="masthead__menu-item">
+              <a href="/configurator/year-archive/">Posts</a>
+            </li><li class="masthead__menu-item">
+              <a href="/configurator/docs/Introduction/">Documentation</a>
+            </li><li class="masthead__menu-item">
+              <a href="/configurator/license/">License</a>
+            </li></ul>
+        
+        <button class="search__toggle" type="button">
+          <span class="visually-hidden">Toggle search</span>
+          <i class="fas fa-search"></i>
+        </button>
+        
+        <button class="greedy-nav__toggle hidden" type="button">
+          <span class="visually-hidden">Toggle menu</span>
+          <div class="navicon"></div>
+        </button>
+        <ul class="hidden-links hidden"></ul>
+      </nav>
+    </div>
+  </div>
+</div>
+
+
+    <div class="initial-content">
+      
+
+
+
+<div id="main" role="main">
+  
+  <div class="sidebar sticky">
+  
+
+
+<div itemscope itemtype="https://schema.org/Person">
+
+  
+    <div class="author__avatar">
+      
+        <img src="/configurator/assets/images/REnugadevi.png" alt="Renugadevi B" itemprop="image">
+      
+    </div>
+  
+
+  <div class="author__content">
+    
+      <h3 class="author__name" itemprop="name">Renugadevi B</h3>
+    
+    
+      <div class="author__bio" itemprop="description">
+        <p>Software Engineer at gopaddle</p>
+
+      </div>
+    
+  </div>
+
+  <div class="author__urls-wrapper">
+    <button class="btn btn--inverse">Follow</button>
+    <ul class="author__urls social-icons">
+      
+
+      
+        
+          
+            <li><a href="https://www.linkedin.com/in/renugadevibalasubramaniyam/" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-linkedin-square" aria-hidden="true"></i><span class="label">Linked In</span></a></li>
+          
+        
+          
+            <li><a href="https://twitter.com/Renuga134" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-twitter-square" aria-hidden="true"></i><span class="label">Twitter</span></a></li>
+          
+        
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <!--
+  <li>
+    <a href="http://link-to-whatever-social-network.com/user/" itemprop="sameAs" rel="nofollow noopener noreferrer">
+      <i class="fas fa-fw" aria-hidden="true"></i> Custom Social Profile Link
+    </a>
+  </li>
+-->
+    </ul>
+  </div>
+</div>
+
+  
+  </div>
+
+
+
+  <article class="page" itemscope itemtype="https://schema.org/CreativeWork">
+    <meta itemprop="headline" content="Strange things you never knew about ConfigMaps">
+    <meta itemprop="description" content="Deploying on Kubernetes is one complex task, but dealing with surprises during maintenance is another. I can talk from my own experience of maintaining our gopaddle platform deployments on Kubernetes for more than a year now. Even with careful planning and collective knowledge from within the team, there are still hidden challenges in keeping the deployments intact. We get to learn those hidden challenges only by running the production systems on kubernetes for a while. This blog is one such wisdom we learnt. I would like to share our experience with ConfigMaps and what solution we built (open source) to overcome some trouble with ConfigMaps. For the rest of the blog, I am going to be focusing on ConfigMaps, but secrets also have the same set of challenges. Though I have referenced deployments through out the blog, the given scenario and solution exists for kubernetes secrets as well.">
+    <meta itemprop="datePublished" content="2021-04-01T00:00:00+00:00">
+    <meta itemprop="dateModified" content="2021-04-01T20:00:58+00:00">
+
+    <div class="page__inner-wrap">
+      
+        <header>
+          <h1 id="page-title" class="page__title" itemprop="headline">Strange things you never knew about ConfigMaps
+</h1>
+          
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2021-04-01T00:00:00+00:00">April 1, 2021</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-clock" aria-hidden="true"></i>
+        
+          8 minute read
+        
+      </span>
+    
+  </p>
+
+
+        </header>
+      
+
+      <section class="page__content" itemprop="text">
+        
+          <aside class="sidebar__right ">
+            <nav class="toc">
+              <header><h4 class="nav__title"><i class="fas fa-file-alt"></i> On this page</h4></header>
+              <ul class="toc__menu"><li><a href="#hidden-challenges-of-configmaps">Hidden challenges of ConfigMaps</a></li><li><a href="#configmaps-are-mutable">ConfigMaps are mutable</a></li><li><a href="#workarounds">Workarounds</a></li><li><a href="#versioning-the-configmaps">Versioning the ConfigMaps</a></li><li><a href="#introducing-configurator">Introducing Configurator</a></li></ul>
+
+            </nav>
+          </aside>
+        
+        <p>Deploying on Kubernetes is one complex task, but dealing with surprises during maintenance is another. I can talk from my own experience of maintaining our gopaddle platform deployments on Kubernetes for more than a year now. Even with careful planning and collective knowledge from within the team, there are still hidden challenges in keeping the deployments intact. We get to learn those hidden challenges only by running the production systems on kubernetes for a while. This blog is one such wisdom we learnt. I would like to share our experience with ConfigMaps and what solution we built (open source) to overcome some trouble with ConfigMaps. For the rest of the blog, I am going to be focusing on ConfigMaps, but secrets also have the same set of challenges. Though I have referenced deployments through out the blog, the given scenario and solution exists for kubernetes secrets as well.</p>
+
+<p><img src="https://i1.wp.com/blog.gopaddle.io/wp-content/uploads/2021/04/configMaps-strange-things.png?fit=2016%2C1340&amp;ssl=1" alt="" /></p>
+
+<p>ConfigMaps and Secrets are often overlooked topics when it comes to Cloud Native Deployments. But they can add unforeseen challenges during application maintenance. Let me first introduce you to what ConfigMaps are.</p>
+
+<p>ConfigMaps are Kubernetes resources that are used to store application configurations. It enables build time and run time attribute segregation in a cloud native deployment. Say by using ConfigMaps, you do not have to package application configurations along with your container images. Thus changing application configurations does not require the entire application to be rebuilt. We leverage ConfigMaps to keep our applications 12-factor compatible. In a nutshell, ConfigMaps are:</p>
+
+<ul>
+  <li>Collection of regular files or key/value pairs</li>
+  <li>Can be used to set Environment variables inside a container (using <strong>ValueFrom: ConfigMapRef</strong> to refer to values defined in ConfigMaps)</li>
+  <li>Can be mounted as directories inside containers (using <strong>VolumeMounts/MountPath</strong> keywords) and all the files within ConfigMaps get mounted inside the container on the mountPath provided.</li>
+  <li>Shared across deployments/replicas</li>
+  <li>Confined to a namespace</li>
+  <li>Created from files, literals, <strong>kustomize configMapGenerator</strong></li>
+  <li>Replaces all files within the mount path : Since ConfigMaps are mounted inside the container on a given mount path, any existing files and folders within the container will not be available.</li>
+</ul>
+
+<p>Here is an example of how ConfigMaps are defined and referenced inside a deployment specification.</p>
+
+<p><img src="https://i1.wp.com/blog.gopaddle.io/wp-content/uploads/2021/03/configmaps.png?resize=512%2C239&amp;ssl=1" alt="" /></p>
+
+<p><img src="https://i1.wp.com/blog.gopaddle.io/wp-content/uploads/2021/03/configmaps.png?resize=512%2C239&amp;ssl=1" alt="" /></p>
+
+<p>Example of defining and using ConfigMaps inside deployment specifications</p>
+
+<h2 id="hidden-challenges-of-configmaps">Hidden challenges of ConfigMaps</h2>
+
+<p>Some of the challenges with ConfigMaps are realized as soon as they are mounted inside the container. But some are unearthered only during maintenance. Following are some challenges we have observed :</p>
+
+<ol>
+  <li><strong>Can’t execute files in ConfigMaps</strong> : Starting from K8s 1.9.6, ConfigMaps get mounted as read-only files by default. Hence you may not be able to execute or run these files. Say, if you are planning on executing these files as container EntryPoint or CMD ARGs, then container may crash during startup as it cannot execute these read-only files. If you have recently upgraded the cluster version, then your deployments may break due this. Please check <a href="https://github.com/kubernetes/kubernetes/issues/62099">this K8s issue</a> for information on how to configure <strong>ReadOnlyAPIDataVolumes</strong> to mount ConfigMaps as ReadWrite files.</li>
+  <li><strong>Deployments &amp; ConfigMaps are loosely coupled,</strong> ie., they follow different lifecycle, but updating the contents of a ConfigMap automatically reflects inside the Pods. More often, applications running inside the containers need a restart to pick the new changes. But, applications are clueless of the changes. These changes are noticed during a scale up/down or a Pod restart event when the application inside the container gets restarted.</li>
+  <li><strong>No Versioning/No Rollbacks of ConfigMaps</strong>: ie when deployments are rolled back, it does not roll back the contents of the ConfigMaps.</li>
+</ol>
+
+<p>The last two issues are the resultant of the mutable nature of ConfigMaps.</p>
+
+<h2 id="configmaps-are-mutable">ConfigMaps are mutable</h2>
+
+<p>ConfigMaps are mutable ie., they can be edited. Every time a change is made, it is the same ConfigMap that gets updated. There are no revisions. Let me illustrate this with an example.</p>
+
+<p><img src="https://i0.wp.com/blog.gopaddle.io/wp-content/uploads/2021/03/config-non-immutable.png?resize=512%2C285&amp;ssl=1" alt="" /></p>
+
+<p><img src="https://i0.wp.com/blog.gopaddle.io/wp-content/uploads/2021/03/config-non-immutable.png?resize=512%2C285&amp;ssl=1" alt="" /></p>
+
+<p>ConfigMaps are mutable</p>
+
+<p>We have a ConfigMap, which is referenced in two different deployments. When you change the ConfigMap, the contents of the ConfigMap changes inside the deployments. When the deployments are rolled back, they still point to the current content of the ConfigMap. This can cause a problem when your application is expecting something but it actually sees something else. Deployments do not maintain any state regarding the ConfigMap changes.</p>
+
+<h2 id="workarounds">Workarounds</h2>
+
+<p><img src="https://i0.wp.com/blog.gopaddle.io/wp-content/uploads/2021/03/configmaps-workarounds.png?resize=768%2C275&amp;ssl=1" alt="" /></p>
+
+<p><img src="https://i0.wp.com/blog.gopaddle.io/wp-content/uploads/2021/03/configmaps-workarounds.png?resize=768%2C275&amp;ssl=1" alt="" /></p>
+
+<p>ConfigMaps – Workarounds</p>
+
+<ol>
+  <li><strong>Smart apps:</strong> Applications can be designed in such a way that they constantly poll for changes in the ConfigMaps. This approach still cannot address the roll back issue.</li>
+  <li><strong>Induced Rolling Update:</strong> Another common approach is to hash the contents of the ConfigMap in to the deployment. When the ConfigMap changes, the hash changes and that automatically triggers a rolling update on the deployment. But even in this case, rolling back a deployment does not roll back to the previous content of the ConfigMap. <a href="https://blog.questionable.services/article/kubernetes-deployments-configmap-change/">Here</a> is a reference to how ConfigMap hash can be used.</li>
+  <li><strong>Immutable ConfigMaps:</strong> The next option is to use ConfigMap as an immutable content. This feature was introduced in kubernetes 1.19. When this feature is turned on, you cannot update a ConfigMap and thus you can avoid all the associated problems.</li>
+</ol>
+
+<h2 id="versioning-the-configmaps">Versioning the ConfigMaps</h2>
+
+<p>The ideal solution to keep the deployments and the ConfigMaps in sync is to version control the ConfigMaps and reference them in the deployments.</p>
+
+<p><img src="https://i2.wp.com/blog.gopaddle.io/wp-content/uploads/2021/03/configmap-immutable.png?resize=512%2C284&amp;ssl=1" alt="" /></p>
+
+<p><img src="https://i2.wp.com/blog.gopaddle.io/wp-content/uploads/2021/03/configmap-immutable.png?resize=512%2C284&amp;ssl=1" alt="" /></p>
+
+<p>Versioning ConfigMaps</p>
+
+<ul>
+  <li>
+    <p>In the above example, when the contents of the ConfigMap version 1 is updated, it creates a new ConfigMap version 2. When the deployment specification is updated with ConfigMap version 2, it automatically triggers a rolling update and creates a new deployment version. When the deployment is rolled back, the rolled back version will reference ConfigMap v1. Thus ConfigMaps and deployments go hand in hand.</p>
+  </li>
+  <li>
+    <p>To make this work, we need to :</p>
+  </li>
+  <li><strong>Version ConfigMaps</strong> whenever a change is committed to a ConfigMap</li>
+  <li><strong>Automatically update ConfigMap versions in Deployment Specifications</strong> where ever it being referenced</li>
+  <li><strong>Purge unused ConfigMaps periodically</strong> – Since ConfigMaps are shared resources across deployments and since each deployment may have a different revision history limits, we must consider checking all the revisions of all the deployments within the namespace to know if a ConfigMap is being used and purge accordingly.</li>
+</ul>
+
+<h2 id="introducing-configurator">Introducing Configurator</h2>
+
+<p>Configurator is an open source solution from gopaddle that makes use of <strong>Custom Resource Definitions (CRDs)</strong> for ConfigMaps/Secrets and an operator to automate the above mentioned steps. ConfigMaps and Secrets are now defined as <strong>CustomConfigMaps</strong> and <strong>CustomSecrets</strong> which are custom resources constantly monitored by the Configurator.</p>
+
+<p><strong>How it solves the problem</strong></p>
+
+<p>When a new <strong>CustomConfigMap</strong> or a <strong>CustomSecret</strong> resource is created, it generates a ConfigMap or a Secret with a postfix. This ConfigMap along with the post fix need to be added to the deployments/statefulsets initially.</p>
+
+<p>From then on, if any change to the <strong>CustomConfigMap</strong> or <strong>CustomSecret</strong> is detected, configurator automatically updates all the deployments/statefulsets referencing the specific ConfigMap/Secret with a postfix. Configurator heavily depends on the <strong>configMapName</strong> in the CustomConfigMap and the labels in the deployment/statefulset specifications.</p>
+
+<p><img src="https://i0.wp.com/blog.gopaddle.io/wp-content/uploads/2021/03/configurator-how-it-works.png?resize=1024%2C444&amp;ssl=1" alt="" /></p>
+
+<p><img src="https://i0.wp.com/blog.gopaddle.io/wp-content/uploads/2021/03/configurator-how-it-works.png?resize=1024%2C444&amp;ssl=1" alt="" /></p>
+
+<p>In the above example you can see that the <em>example-customConfigMap.yaml</em> creates a CustomConfigMap with the <strong>configMapName</strong> as <strong><em>testconfig</em></strong>. As soon as the CustomConfigMap is created, it automatically creates a ConfigMap <strong><em>testconfig-sn8ya</em></strong>. We need to manually add this ConfigMapName <strong><em>testconfig</em></strong> and the postfix <strong><em>sn8ya</em></strong> in the deployment’s <strong>metadata.labels</strong> as <strong><em>testconfig: sn8ya</em></strong> and also use the ConfigMapName <strong><em>testconfig-sn8ya</em></strong> in the volumes section.</p>
+
+<p>From now on, user does not have to manage ConfigMaps directly.</p>
+
+<blockquote>
+  <p>Any change required in the ConfigMap or Secret needs to be done through the CustomConfigMap or CustomSecret.</p>
+</blockquote>
+
+<p>When the CustomConfigMap is updated with the new content in the data section, it automatically generates a new ConfigMap <strong><em>testconfig-10jov</em></strong> and updates the deployment with the new ConfigMap name under the volumes and the <strong>metadata.label</strong> section.</p>
+
+<p>Configurator purges unused ConfigMaps and Secret every 5 mins. It scans the replicaset or controllerRevision of all the deployments and statefulsets in the namespace and checks if the <strong>metadata.label</strong> exists for the ConfigMap. If there are no references, it purges the ConfigMap version.</p>
+
+<p><strong>How to use it ?</strong></p>
+
+<p>Download run the YAML files from our repository <a href="https://github.com/gopaddle-io/configurator/tree/main/deploy">here</a> and install them in your cluster.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl apply -f deploy/crd-customConfigMap.yaml
+kubectl apply -f deploy/crd-customSecret.yaml
+kubectl create ns configurator
+kubectl apply -f deploy/configurator-clusterrole.yaml
+kubectl apply -f deploy/configurator-clusterrolebinding.yaml
+kubectl apply -f deploy/configurator-serviceaccount.yaml
+kubectl apply -f deploy/configurator-deployment.yaml
+</code></pre></div></div>
+
+<p>Once the configurator is deployed into the cluster, start creating CustomConfigMap or CustomSecret.</p>
+
+<p> example-customConfigMap.yaml</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>apiVersion: "configurator.gopaddle.io/v1alpha1"
+kind: CustomConfigMap
+metadata:
+ name: configtest
+ namespace: test
+spec:
+  configMapName: testconfig
+  data:
+   application.properties: |
+    FOO=Bar
+</code></pre></div></div>
+
+<p>Create CustomConfigMap in cluster</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Kubectl apply -f example-customConfigMap.yaml 
+</code></pre></div></div>
+
+<p>List the ConfigMaps</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get configMap -n test
+NAME               DATA   AGE
+testconfig-sn8ya   1      7s
+</code></pre></div></div>
+
+<p>Copy the ConfigMap name and add the ConfigMap name in the deployment.yaml file at the volume level and metadata label level. In metadata level split the ConfigMap name and postfix separately and add that in the label.</p>
+
+<p>deployment.yaml</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: busybox-deployment
+  labels:
+   testconfig: sn8ya
+    app: busybox
+spec:
+  replicas: 1
+  revisionHistoryLimit: 1
+  strategy: 
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: busybox
+  template:
+    metadata:
+      labels:
+        app: busybox
+    spec:
+      containers:
+      - name: busybox
+        image: busybox
+        imagePullPolicy: IfNotPresent
+        command: ['sh', '-c', 'echo Container 1 is Running ; sleep 3600']
+        volumeMounts:
+        - mountPath: /test
+          name: test-config
+      volumes:
+      - name: test-config
+        configMap:
+          name: testconfig-sn8ya
+</code></pre></div></div>
+
+<p>Edit the CustomConfigMap and list the ConfigMap. You can see new ConfigMap name with a postfix.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Kubectl edit ccm configtest  -n test
+Kubectl list cm -n test
+NAME               DATA   AGE
+testconfig-10jov   1      10s
+testconfig-sn8ya   1      111s
+</code></pre></div></div>
+
+<p>Now check the deployment. You can see that it is updated with new ConfigMap and metadata label.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get deployment busybox-deployment -n test -o yaml 
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: busybox-deployment
+  labels:
+  testconfig: 10jov
+    app: busybox
+spec:
+  replicas: 1
+  revisionHistoryLimit: 1
+  strategy: 
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: busybox
+  template:
+    metadata:
+      labels:
+        app: busybox
+    spec:
+      containers:
+      - name: busybox
+        image: busybox
+        imagePullPolicy: IfNotPresent
+        command: ['sh', '-c', 'echo Container 1 is Running ; sleep 3600']
+        volumeMounts:
+        - mountPath: /test
+          name: test-config
+      volumes:
+      - name: test-config
+        configMap:
+          name: testconfig-10jov
+</code></pre></div></div>
+
+<p>Give configurator a try and share your feedback with us. If you are interested in contributing to the project, you can reach out to us. The project can be cloned from <a href="https://github.com/gopaddle-io/configurator">https://github.com/gopaddle-io/configurator</a></p>
+
+        
+      </section>
+
+      <footer class="page__meta">
+        
+        
+  
+
+
+  
+
+  <p class="page__taxonomy">
+    <strong><i class="fas fa-fw fa-tags" aria-hidden="true"></i> Tags: </strong>
+    <span itemprop="keywords">
+    
+      <a href="/configurator/tags/#introduction" class="page__taxonomy-item" rel="tag">introduction</a><span class="sep">, </span>
+    
+      <a href="/configurator/tags/#usage" class="page__taxonomy-item" rel="tag">usage</a>
+    
+    </span>
+  </p>
+
+
+
+
+        
+
+  <p class="page__date"><strong><i class="fas fa-fw fa-calendar-alt" aria-hidden="true"></i> Updated:</strong> <time datetime="2021-04-01">April 1, 2021</time></p>
+
+
+      </footer>
+
+      
+
+      
+  <nav class="pagination">
+    
+      <a href="#" class="pagination--pager disabled">Previous</a>
+    
+    
+      <a href="/configurator/An-Introduction-to-Configurator/" class="pagination--pager" title="An Introduction To Configurator
+">Next</a>
+    
+  </nav>
+
+    </div>
+
+    
+  </article>
+
+  
+  
+    <div class="page__related">
+      <div align="center" style="margin: 1em 0;">
+        <ins class="adsbygoogle"
+              style="display:block; border-bottom: initial;"
+              data-ad-client="ca-pub-7328585512091257"
+              data-ad-slot="3049671934"
+              data-ad-format="auto"
+              data-full-width-responsive="true"></ins>
+      </div>
+      <h2 class="page__related-title">You May Also Enjoy</h2>
+      <div class="grid__wrapper">
+        
+          
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/configurator/assets/images/configurator.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/configurator/Using-Helm-Charts-with-Configurator/" rel="permalink">Using Helm Charts with Configurator
+</a>
+      
+    </h2>
+    
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2021-09-08T00:00:00+00:00">September 8, 2021</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          3 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt" itemprop="description">This blog will focus on the following motives:
+
+  Installing Configurator using the helm chart. *   Customizing Configurator helm chart based on requirements...</p>
+  </article>
+</div>
+
+        
+          
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/configurator/assets/images/configurator.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/configurator/Building-Configurator-with-custom-Docker-repo/" rel="permalink">Building Configurator with custom Docker repo
+</a>
+      
+    </h2>
+    
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-fw fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2021-08-31T00:00:00+00:00">August 31, 2021</time>
+      </span>
+    
+
+    <span class="page__meta-sep"></span>
+
+    
+      
+      
+
+      <span class="page__meta-readtime">
+        <i class="far fa-fw fa-clock" aria-hidden="true"></i>
+        
+          5 minute read
+        
+      </span>
+    
+  </p>
+
+
+    <p class="archive__item-excerpt" itemprop="description">In this blog, I would like to introduce you to the steps for using custom Docker repository while building Configurator.
+
+</p>
+  </article>
+</div>
+
+        
+          
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+      <div class="archive__item-teaser">
+        <img src="/configurator/assets/images/configurator.png" alt="">
+      </div>
+    
+    <h2 class="archive__item-title no_toc" itemprop="headline">
+      
+        <a href="/configurator/An-Introduction-to-Configurator/" rel="permalink">An Introduction To Configurator
+</a>
+      
+    </h2>
+    
+
+  <p class="page__meta">
+    
+      
+      <span class="page__meta-date">
+        <i class="far fa-calendar-alt" aria-hidden="true"></i>
+        
+        <time datetime="2021-08-04T00:00:00+00:00">August 4, 2021</time>
+      </span>
+    
+
+    
+
+    
+  </p>
+
+
+    <p class="archive__item-excerpt" itemprop="description">Problem statement and solution for ConfigMap versioning and sync …
+</p>
+  </article>
+</div>
+
+        
+      </div>
+    </div>
+  
+  
+</div>
+
+      <div align="center" style="margin: 1em 0;">
+        <ins class="adsbygoogle"
+             style="display:block; border-bottom: initial;"
+             data-ad-client="ca-pub-7328585512091257"
+             data-ad-slot="3049671934"
+             data-ad-format="auto"
+             data-full-width-responsive="true"></ins>
+      </div>
+    </div>
+
+    
+      <div class="search-content">
+        <div class="search-content__inner-wrap"><form class="search-content__form" onkeydown="return event.key != 'Enter';">
+    <label class="sr-only" for="search">
+      Enter your search term...
+    </label>
+    <input type="search" id="search" class="search-input" tabindex="-1" placeholder="Enter your search term..." />
+  </form>
+  <div id="results" class="results"></div></div>
+
+      </div>
+    
+
+    <div class="page__footer">
+      <footer>
+        <!-- start custom footer snippets -->
+
+<!-- end custom footer snippets -->
+        <div class="page__footer-follow">
+  <ul class="social-icons">
+    
+
+    
+
+    
+      <li><a href="/configurator/feed.xml"><i class="fas fa-fw fa-rss-square" aria-hidden="true"></i> Feed</a></li>
+    
+  </ul>
+</div>
+
+<div class="page__footer-copyright">&copy; 2021 Adeesh Devanand. Powered by <a href="https://jekyllrb.com" rel="nofollow">Jekyll</a> &amp; <a href="https://mademistakes.com/work/minimal-mistakes-jekyll-theme/" rel="nofollow">Minimal Mistakes</a>.</div>
+
+      </footer>
+    </div>
+
+    
+  <script src="/configurator/assets/js/main.min.js"></script>
+
+
+
+
+<script src="/configurator/assets/js/lunr/lunr.min.js"></script>
+<script src="/configurator/assets/js/lunr/lunr-store.js"></script>
+<script src="/configurator/assets/js/lunr/lunr-en.js"></script>
+
+
+
+
+
+
+
+
+    <style>
+      .google-auto-placed {
+        margin: 2em auto;
+      }
+    </style>
+    <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+    <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+
+  </body>
+</html>
