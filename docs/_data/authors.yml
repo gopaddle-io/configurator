@@ -1,0 +1,69 @@
+# Authors
+
+Gayathri R:
+  name        : "Gayathri R"
+  bio         : "UI Developer & QA @ gopaddle"
+  avatar      : "/assets/images/Gayathri.jpg"
+  links:
+    - label: "Linked In"
+      icon: "fab fa-fw fa-linkedin-square"
+      url: "https://www.linkedin.com/in/gayathri-rangaswamy/"
+    - label: "Twitter"
+      icon: "fab fa-fw fa-twitter-square"
+      url: "https://twitter.com/Gayathr14768590"
+    
+
+Ashvin Kumar:
+  name        : "Ashvin Kumar"
+  bio         : "Open Source Contributor @ Akraino - LFEdge & gopaddle's Sail"
+  avatar      : "/assets/images/Ashvin.png"
+  links:
+    - label: "Linked In"
+      icon: "fab fa-fw fa-linkedin-square"
+      url: "https://www.linkedin.com/in/ashvin-kumar-2689341b2/"
+    - label: "Twitter"
+      icon: "fab fa-fw fa-twitter-square"
+      url: "https://twitter.com/ashvin_kumar98"
+      
+Renugadevi B:
+  name        : "Renugadevi B"
+  bio         : "Software Engineer at gopaddle"
+  avatar      : "/assets/images/REnugadevi.png"
+  links:
+    - label: "Linked In"
+      icon: "fab fa-fw fa-linkedin-square"
+      url: "https://www.linkedin.com/in/renugadevibalasubramaniyam/"
+    - label: "Twitter"
+      icon: "fab fa-fw fa-twitter-square"
+      url: "https://twitter.com/Renuga134"
+
+Vinothini Raju:
+  name        : "Vinothini Raju"
+  bio         : "Building the NextGen platform for Cloud Native Apps. CEO @ gopaddle"
+  avatar      : "/assets/images/Vinothini.jfif"
+  links:
+    - label: "Email"
+      icon: "fas fa-fw fa-envelope-square"
+      url: "mailto:vinothiniraju@gopaddle.io"
+    - label: "Linked In"
+      icon: "fab fa-fw fa-linkedin-square"
+      url: "https://www.linkedin.com/in/vinothini-raju-9817ab5"
+    - label: "Twitter"
+      icon: "fab fa-fw fa-twitter-square"
+      url: "https://twitter.com/vinothiniraju"
+
+Adeesh Devanand:
+  name        : "Adeesh Devanand"
+  bio         : "Maintaining Open Source Projects @gopaddle.io"
+  avatar      : "/assets/images/Adeesh.jfif"
+  links:
+    - label: "Email"
+      icon: "fas fa-fw fa-envelope-square"
+      url: "mailto:adeeshdevanand@gmail.com"
+    - label: "Linked In"
+      icon: "fab fa-fw fa-linkedin-square"
+      url: "https://www.linkedin.com/in/adeesh-devanand-7a564820a/"
+    - label: "GitHub"
+      icon: "fab fa-fw fa-github-square"
+      url: "https://github.com/Adeesh-devanand"
+    
