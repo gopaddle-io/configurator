@@ -47,6 +47,8 @@ contribute:
     url: /contribute/Code-Of-Conduct/
   - title: "Weekly Meetings"
     children:
+      - title: "2021-10-06"
+        url: /contribute/meetings/2021-10-06/      
       - title: "2021-09-29"
         url: /contribute/meetings/2021-09-29/
       - title: "2021-09-22"
@@ -55,5 +57,4 @@ contribute:
         url: /contribute/meetings/2021-09-15/
       - title: "2021-09-08"
         url: /contribute/meetings/2021-09-08/
-      - title: "2021-10-06"
-        url: /contribute/meetings/2021-10-06/
+        
