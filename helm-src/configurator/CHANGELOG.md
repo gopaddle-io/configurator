@@ -1,5 +1,10 @@
 # Changelog for Configurator Helm Chart
 
+## 0.3.0-alpha
+
+* Migrate CRDs to apiextensions.k8s.io/v1 in preparation for Kubernetes 1.22+
+  https://github.com/gopaddle-io/configurator/issues/53
+
 ## 0.2.0-alpha
 
 * Prefix all resources with `.Release.Name` to avoid conflicts with a future support for multiple installations in the same cluster.
