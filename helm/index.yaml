@@ -3,7 +3,17 @@ entries:
   configurator:
   - apiVersion: v2
     appVersion: latest
-    created: "2021-09-13T23:49:07.831287291-03:00"
+    created: "2021-10-22T08:32:23.349059654-03:00"
+    description: Helm chart for installing configurator CRDs & Custom Controller
+    digest: c5b81a2a13e6711770577fff323d0a8b974f8f76029f68c96ee20d756ca1140f
+    name: configurator
+    type: application
+    urls:
+    - configurator-0.3.0-alpha.tgz
+    version: 0.3.0-alpha
+  - apiVersion: v2
+    appVersion: latest
+    created: "2021-10-22T08:32:23.348812336-03:00"
     description: Helm chart for installing configurator CRDs & Custom Controller
     digest: e4a5fc080a5843b69dee563b09f1910493b51bdc5640296c0541aa12b454501c
     name: configurator
@@ -13,7 +23,7 @@ entries:
     version: 0.2.0-alpha
   - apiVersion: v2
     appVersion: 1.16.0
-    created: "2021-09-13T23:49:07.831073576-03:00"
+    created: "2021-10-22T08:32:23.348347273-03:00"
     description: Helm chart for installing configurator CRDs & Custom Controller
     digest: 63d1fa4baf7a2c04e568b6a332d7f019cae3a4e6190b063b7a1f85eac8c966e4
     name: configurator
@@ -21,4 +31,4 @@ entries:
     urls:
     - configurator-0.1.0.tgz
     version: 0.1.0
-generated: "2021-09-13T23:49:07.830673546-03:00"
+generated: "2021-10-22T08:32:23.34775123-03:00"

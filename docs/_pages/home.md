@@ -7,7 +7,7 @@ header:
   overlay_image: /assets/images/home-bg.jpg
   actions:
     - label: "<i class='fas fa-download'></i> Install now"
-      url: "/Quick-Start-Guide/"
+      url: "https://github.com/gopaddle-io/configurator/raw/main/helm/configurator-0.1.0.tgz"
 excerpt: >
   Never let a ConfigMap update break your Kubernetes deployment<br />
   <small><a href="https://github.com/gopaddle-io/configurator/releases/tag/v0.0.1">Latest release v.0.0.1</a></small>
@@ -16,7 +16,7 @@ feature_row1:
     alt: "Github repo"
     title: "Github project repo"
     excerpt: "Visit the project repository to clone, fork, customize the project…"
-    url: "/docs/layouts/"
+    url: "https://github.com/gopaddle-io/configurator"
     btn_class: "btn--primary"
     btn_label: "Repo Link"
   - image_path: /assets/images/discord.png
