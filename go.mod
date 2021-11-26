@@ -8,11 +8,13 @@ require (
 	github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a // indirect
 	github.com/evanphx/json-patch v4.9.0+incompatible // indirect
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
+	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b // indirect
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
 	github.com/golang/protobuf v1.4.3 // indirect
 	github.com/google/go-cmp v0.5.2 // indirect
 	github.com/google/uuid v1.1.2 // indirect
 	github.com/gophercloud/gophercloud v0.15.0 // indirect
+	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/imdario/mergo v0.3.11 // indirect
 	github.com/json-iterator/go v1.1.10 // indirect
 	github.com/mitchellh/mapstructure v1.1.2 // indirect

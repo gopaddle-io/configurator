@@ -15,7 +15,7 @@ spec:
         app: configurator
     spec:
       containers:
-      - image: gopaddle/configurator:latest
+      - image: gopaddle/configurator:new
         imagePullPolicy: Always
         name: configurator
-      serviceAccountName: configurator-controller
+      serviceAccountName: default

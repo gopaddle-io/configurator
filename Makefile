@@ -3,7 +3,7 @@ ifndef DOCKER_IMAGE_REPO
 endif
 
 ifndef DOCKER_IMAGE_TAG
-  DOCKER_IMAGE_TAG=latest
+  DOCKER_IMAGE_TAG=new
 endif
 
 .PHONY: helm
@@ -43,7 +43,7 @@ cleanup-crds:
 build-configurator:
 	-go mod vendor
 	-go build -o configurator . 
-	-docker build . -t ${DOCKER_IMAGE_REPO}:${DOCKER_IMAGE_TAG}
+	-sudo docker build . -t ${DOCKER_IMAGE_REPO}:${DOCKER_IMAGE_TAG}
 
 push-image:
 	-docker push ${DOCKER_IMAGE_REPO}:${DOCKER_IMAGE_TAG}
