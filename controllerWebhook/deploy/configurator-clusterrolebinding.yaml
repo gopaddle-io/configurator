@@ -1,0 +1,15 @@
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: Configurator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: configurator
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: configurator
+- kind: ServiceAccount
+  name: configurator-controller-manager
+  namespace: configurator-system

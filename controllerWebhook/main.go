@@ -37,7 +37,7 @@ func main() {
 	mux.HandleFunc("/status", GetControllerWebhookStatus)
 	mux.HandleFunc("/deploycontroller", whsvr.DeployController)
 	mux.HandleFunc("/podcontroller", whsvr.PodConfigController)
-
+	mux.HandleFunc("/stscontroller", whsvr.StatefulSetController)
 	whsvr.Server.Handler = mux
 
 	fmt.Printf("Server listening at %s", port)

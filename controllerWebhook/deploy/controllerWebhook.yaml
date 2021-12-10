@@ -15,7 +15,7 @@ spec:
         app: controllerwebhook
     spec:
       containers:
-      - image: trov/controllerwebhook:1.7
+      - image: trov/controllerwebhook:1.5
         command:
         - ./controllerWebhook
         args:

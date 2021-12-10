@@ -1,83 +1,113 @@
+/*
+Copyright 2021.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package main
 
 import (
 	"flag"
-	"time"
+	"os"
 
-	configController "github.com/gopaddle-io/configurator/controller"
-	"github.com/gopaddle-io/configurator/pkg/signals"
-
-	"github.com/gopaddle-io/configurator/watcher"
-
-	clientset "github.com/gopaddle-io/configurator/pkg/client/clientset/versioned"
-	informers "github.com/gopaddle-io/configurator/pkg/client/informers/externalversions"
-	kubeinformers "k8s.io/client-go/informers"
-	"k8s.io/client-go/kubernetes"
+	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
+	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 
-	"k8s.io/klog"
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+
+	configuratorgopaddleiov1alpha1 "github.com/gopaddle-io/configurator/apis/configurator.gopaddle.io/v1alpha1"
+	configuratorgopaddleiocontrollers "github.com/gopaddle-io/configurator/controllers/configurator.gopaddle.io"
+	corecontrollers "github.com/gopaddle-io/configurator/controllers/core"
+	//+kubebuilder:scaffold:imports
 )
 
+var (
+	scheme   = runtime.NewScheme()
+	setupLog = ctrl.Log.WithName("setup")
+)
+
+func init() {
+	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+
+	utilruntime.Must(configuratorgopaddleiov1alpha1.AddToScheme(scheme))
+	//+kubebuilder:scaffold:scheme
+}
+
 func main() {
-
-	var kubeconfig *string
-	var cfg *rest.Config
-	var err error
-
-	kubeconfig = flag.String("kubeconfig", "", "Path to the kubeconfig file. If not specified, InClusterConfig will be used.")
+	var metricsAddr string
+	var enableLeaderElection bool
+	var probeAddr string
+	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
+	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
+	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
+		"Enable leader election for controller manager. "+
+			"Enabling this will ensure there is only one active controller manager.")
+	opts := zap.Options{
+		Development: true,
+	}
+	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 
-	if ( *kubeconfig != "" ) {
-		klog.Warningf("Using kubeconfig: %s", *kubeconfig)
-		cfg, err = clientcmd.BuildConfigFromFlags("", *kubeconfig)
-	} else {
-		cfg, err = rest.InClusterConfig()
-	}
+	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
+	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+		Scheme:                 scheme,
+		MetricsBindAddress:     metricsAddr,
+		Port:                   9443,
+		HealthProbeBindAddress: probeAddr,
+		LeaderElection:         enableLeaderElection,
+		LeaderElectionID:       "adddb861.configurator.gopaddle.io",
+	})
 	if err != nil {
-		klog.Fatalf("Error building kubeconfig: %s", err.Error())
+		setupLog.Error(err, "unable to start manager")
+		os.Exit(1)
 	}
 
-	clientSet, err := kubernetes.NewForConfig(cfg)
-	if err != nil {
-		klog.Fatalf("Error building kubernetes clientset: %s", err.Error(), time.Now().UTC())
+	if err = (&configuratorgopaddleiocontrollers.CustomConfigMapReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "CustomConfigMap")
+		os.Exit(1)
+	}
+	if err = (&corecontrollers.ConfigMapReconciler{
+		Client:        mgr.GetClient(),
+		Scheme:        mgr.GetScheme(),
+		EventRecorder: mgr.GetEventRecorderFor("ConfigMapReconciler"),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ConfigMap")
+		os.Exit(1)
+	}
+	//+kubebuilder:scaffold:builder
+
+	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
+		setupLog.Error(err, "unable to set up health check")
+		os.Exit(1)
+	}
+	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+		setupLog.Error(err, "unable to set up ready check")
+		os.Exit(1)
 	}
 
-	//trigger previous labels and configmaps
-	e := watcher.TriggerWatcher(clientSet)
-	if e != nil {
-		klog.Warningf("failed on triggering watcher for pre-existing labels", e, time.Now().UTC())
+	setupLog.Info("starting manager")
+	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+		setupLog.Error(err, "problem running manager")
+		os.Exit(1)
 	}
-	//purge unused configmaps and secrets
-	watcher.PurgeJob(clientSet)
-
-	// set up signals so we handle the first shutdown signal gracefully
-	stopCh := signals.SetupSignalHandler()
-
-	configuratorClientSet, err := clientset.NewForConfig(cfg)
-	if err != nil {
-		klog.Fatalf("Error building example clientset: %s", err.Error())
-	}
-
-	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(clientSet, time.Second*30)
-	configInformerFactory := informers.NewSharedInformerFactory(configuratorClientSet, time.Second*30)
-
-	controller := configController.NewController(clientSet, configuratorClientSet,
-		kubeInformerFactory.Core().V1().ConfigMaps(),
-		configInformerFactory.Configurator().V1alpha1().CustomConfigMaps(),
-		kubeInformerFactory.Core().V1().Secrets(),
-		configInformerFactory.Configurator().V1alpha1().CustomSecrets())
-
-	// notice that there is no need to run Start methods in a separate goroutine. (i.e. go kubeInformerFactory.Start(stopCh)
-	// Start method is non-blocking and runs all registered informers in a dedicated goroutine.
-	kubeInformerFactory.Start(stopCh)
-	configInformerFactory.Start(stopCh)
-
-	//start contoller
-	if err = controller.Run(1, stopCh); err != nil {
-		klog.Fatalf("Error running controller: %s", err.Error())
-	}
-
 }
