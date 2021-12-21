@@ -1,0 +1,20 @@
+# permissions for end users to view customconfigmaps.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: customconfigmap-viewer-role
+rules:
+- apiGroups:
+  - configurator.gopaddle.io
+  resources:
+  - customconfigmaps
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - configurator.gopaddle.io
+  resources:
+  - customconfigmaps/status
+  verbs:
+  - get

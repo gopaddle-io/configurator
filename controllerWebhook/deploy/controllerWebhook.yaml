@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: controllerwebhook
+  namespace: configurator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      configurator: configurator-controllerwebhook
+  template:
+    metadata:
+      labels:
+        configurator: configurator-controllerwebhook
+        app: controllerwebhook
+    spec:
+      containers:
+      - image: trov/controllerwebhook:1.5
+        command:
+        - ./controllerWebhook
+        args:
+        - -tlsCertFile=/etc/webhook/certs/cert.pem
+        - -tlsKeyFile=/etc/webhook/certs/key.pem
+        imagePullPolicy: Always
+        name: controllerwebhook
+        volumeMounts:
+        - name: webhook-certs
+          mountPath: /etc/webhook/certs
+      volumes:
+      - name: webhook-certs
+        secret:
+          secretName: controllerwebhook-certs

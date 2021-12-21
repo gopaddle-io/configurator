@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: controllerwebhook
+  namespace: configurator
+spec:
+  selector:
+    configurator: configurator-controllerwebhook
+  ports:
+    - protocol: TCP
+      port: 443
+      targetPort: 8015
+  type: ClusterIP
