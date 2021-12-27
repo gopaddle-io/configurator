@@ -135,6 +135,8 @@ github.com/googleapis/gnostic v0.5.1/go.mod h1:6U4PtQXGIEt/Z3h5MAT7FNofLnw9vXk2c
 github.com/googleapis/gnostic v0.5.5/go.mod h1:7+EbHbldMins07ALC74bsA81Ovc97DwqyJO1AENw9kA=
 github.com/gopaddle-io/configurator v0.0.1 h1:jkf3t32kpvQOEbwTXDQkG32HSV4qaRVMv1N4VoJdBuE=
 github.com/gopaddle-io/configurator v0.0.1/go.mod h1:d3CMeRHzqTKhKx0zgwAk5zy8/I75qHmUVEI9kCtYITU=
+github.com/gopaddle-io/configurator v0.0.2 h1:xIb5kxrxNquAJVeGZ1GdmHDgtgEsi3t9Z/XyfzvF9Jw=
+github.com/gopaddle-io/configurator v0.0.2/go.mod h1:d3CMeRHzqTKhKx0zgwAk5zy8/I75qHmUVEI9kCtYITU=
 github.com/gophercloud/gophercloud v0.15.0/go.mod h1:VX0Ibx85B60B5XOrZr6kaNwrmPUzcmMpwxvQ1WQIIWM=
 github.com/gorilla/mux v1.8.0 h1:i40aqfkR1h2SlN9hojwV5ZA91wcXFOvkdNIeFDP5koI=
 github.com/gorilla/mux v1.8.0/go.mod h1:DVbg23sWSpFRCP0SfiEN6jmj59UnW/n46BH5rLB71So=

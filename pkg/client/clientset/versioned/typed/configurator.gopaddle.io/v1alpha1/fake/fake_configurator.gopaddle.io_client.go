@@ -31,6 +31,10 @@ func (c *FakeConfiguratorV1alpha1) CustomConfigMaps(namespace string) v1alpha1.C
 	return &FakeCustomConfigMaps{c, namespace}
 }
 
+func (c *FakeConfiguratorV1alpha1) CustomSecrets(namespace string) v1alpha1.CustomSecretInterface {
+	return &FakeCustomSecrets{c, namespace}
+}
+
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeConfiguratorV1alpha1) RESTClient() rest.Interface {

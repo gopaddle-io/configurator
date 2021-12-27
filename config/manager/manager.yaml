@@ -22,8 +22,6 @@ spec:
       labels:
         control-plane: controller-manager
     spec:
-      securityContext:
-        runAsNonRoot: true
       containers:
       - command:
         - /manager
@@ -33,6 +31,8 @@ spec:
         name: manager
         securityContext:
           allowPrivilegeEscalation: false
+          runAsUser: 65532
+          runAsGroup: 65532
         livenessProbe:
           httpGet:
             path: /healthz
@@ -48,9 +48,14 @@ spec:
         resources:
           limits:
             cpu: 100m
-            memory: 30Mi
+            memory: 2000Mi
           requests:
             cpu: 100m
-            memory: 20Mi
+            memory: 1000Mi
+      initContainers:
+      - command:
+        - ./controllerInit
+        image: trov/controllerinit:1.3
+        name: init-controller
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10
