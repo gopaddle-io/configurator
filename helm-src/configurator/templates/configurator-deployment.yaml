@@ -1,8 +1,14 @@
+{{- if .Values.deployments.configuratorController }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: "{{ .Release.Name }}-controller"
   namespace: {{ .Release.Namespace }}
+  labels: 
+    app.kubernetes.io/name: "{{ .Release.Name }}-controller"
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    helm.sh/chart: {{ include "configurator.chart" . }}
 spec:
   replicas: {{ .Values.replicas  }}
   selector:
@@ -15,9 +21,15 @@ spec:
         app: configurator
     spec:
       containers:
-      - image: "{{ .Values.image.repository }}:{{ coalesce .Values.image.tag .Chart.AppVersion }}"
-        imagePullPolicy: {{ .Values.image.pullPolicy }}
+      - image: "{{ .Values.configuratorController.image.repository }}:{{ coalesce .Values.configuratorController.image.tag .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.configuratorController.image.pullPolicy }}
         name: configurator
         resources:
-          {{- .Values.resources | toYaml | nindent 10 }}
+          {{- .Values.configuratorController.resources | toYaml | nindent 10 }}
+      initContainers:
+      - image: "{{ .Values.configuratorController.image.initRepository }}:{{ coalesce .Values.configuratorController.image.initTag .Chart.AppVersion }}"
+        name: init-controller
+        command:
+        - ./controllerInit
       serviceAccountName: "{{ .Release.Name }}-controller"
+{{- end}}

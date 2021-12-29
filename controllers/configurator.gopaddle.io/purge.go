@@ -83,7 +83,6 @@ func PurgeCCMAndCS() {
 				for _, rs := range allRSs.Items {
 					templateAnnotation := rs.Spec.Template.Annotations
 					for key, value := range templateAnnotation {
-						ccmname := "ccm-" + configMapName
 						if key == "ccm-"+configMapName && value == configVersion {
 							checkConfig = true
 						}
@@ -123,14 +122,21 @@ func PurgeCCMAndCS() {
 				}
 			}
 
-			if len(deploymentList.Items) != 0 || len(stsList.Items) != 0 {
-				if !checkConfig {
-					//purge ccm
-					err := configuratorClientSet.ConfiguratorV1alpha1().CustomConfigMaps(ns.Name).Delete(context.TODO(), ccm.Name, metav1.DeleteOptions{})
-					if err != nil {
-						klog.Errorf(fmt.Sprintf("Failed on parge customConfigMap '%s'", ccm.Name), "Error", err.Error(), time.Now().UTC())
-					} else {
-						klog.Infof(fmt.Sprintf("customConfigMap purged successfully '%s'", ccm.Name), time.Now().UTC())
+			//get configmap
+			configmap, conferr := clientSet.CoreV1().ConfigMaps(ns.Name).Get(context.TODO(), configMapName, metav1.GetOptions{})
+			if conferr != nil {
+				klog.Errorf(fmt.Sprintf("Failed on getting configmap '%s'", configMapName), "Error", conferr.Error(), time.Now().UTC())
+			}
+			if len(configmap.Annotations) != 0 {
+				if configmap.Annotations["deployments"] != "" || configmap.Annotations["statefulsets"] != "" {
+					if !checkConfig {
+						//purge ccm
+						err := configuratorClientSet.ConfiguratorV1alpha1().CustomConfigMaps(ns.Name).Delete(context.TODO(), ccm.Name, metav1.DeleteOptions{})
+						if err != nil {
+							klog.Errorf(fmt.Sprintf("Failed on parge customConfigMap '%s'", ccm.Name), "Error", err.Error(), time.Now().UTC())
+						} else {
+							klog.Infof(fmt.Sprintf("customConfigMap purged successfully '%s'", ccm.Name), time.Now().UTC())
+						}
 					}
 				}
 			}
@@ -208,14 +214,21 @@ func PurgeCCMAndCS() {
 				}
 			}
 
-			if len(deploymentList.Items) != 0 && len(stsList.Items) != 0 {
-				if !checkSecret {
-					//purge ccm
-					err := configuratorClientSet.ConfiguratorV1alpha1().CustomSecrets(ns.Name).Delete(context.TODO(), cs.Name, metav1.DeleteOptions{})
-					if err != nil {
-						klog.Errorf(fmt.Sprintf("Failed on parge customSecret '%s'", cs.Name), "Error", err.Error(), time.Now().UTC())
-					} else {
-						klog.Infof(fmt.Sprintf("customSecret purged successfully '%s'", cs.Name), time.Now().UTC())
+			//get secret
+			secret, secretErr := clientSet.CoreV1().Secrets(ns.Name).Get(context.TODO(), secretName, metav1.GetOptions{})
+			if secretErr != nil {
+				klog.Errorf(fmt.Sprintf("Failed on getting secret '%s'", secretName), "Error", secretErr.Error(), time.Now().UTC())
+			}
+			if len(secret.Annotations) != 0 {
+				if secret.Annotations["deployments"] != "" || secret.Annotations["statefulsets"] != "" {
+					if !checkSecret {
+						//purge ccm
+						err := configuratorClientSet.ConfiguratorV1alpha1().CustomSecrets(ns.Name).Delete(context.TODO(), cs.Name, metav1.DeleteOptions{})
+						if err != nil {
+							klog.Errorf(fmt.Sprintf("Failed on parge customSecret '%s'", cs.Name), "Error", err.Error(), time.Now().UTC())
+						} else {
+							klog.Infof(fmt.Sprintf("customSecret purged successfully '%s'", cs.Name), time.Now().UTC())
+						}
 					}
 				}
 			}
