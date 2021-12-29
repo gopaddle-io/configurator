@@ -113,6 +113,39 @@ func ConfigValidation(ar *v1.AdmissionReview) *v1.AdmissionResponse {
 				}
 			}
 
+		} else if volume.Secret != nil {
+			//get clusterConf
+			var cfg *rest.Config
+			var err error
+			cfg, err = rest.InClusterConfig()
+			//create clientset
+			clientSet, err := kubernetes.NewForConfig(cfg)
+			if err != nil {
+				klog.Error("Error building kubernetes clientset: %s", err.Error(), time.Now().UTC())
+			}
+
+			secret, err := clientSet.CoreV1().Secrets(pod.Namespace).Get(context.TODO(), volume.Secret.SecretName, metav1.GetOptions{})
+			if err != nil {
+				return &v1.AdmissionResponse{
+					Result: &metav1.Status{
+						Message: err.Error(),
+					},
+				}
+			}
+			if pod.Annotations["cs-"+volume.Secret.SecretName] == secret.Annotations["currentCustomSecretVersion"] {
+				klog.Info("customSecret version is equal to pod SecretVersion")
+			} else {
+				//copy CS to secret
+				secret.Annotations["currentCustomSecretVersion"] = pod.Annotations["cs-"+volume.Secret.SecretName]
+				err := CopyCSToSecret(secret)
+				if err != nil {
+					return &v1.AdmissionResponse{
+						Result: &metav1.Status{
+							Message: err.Error(),
+						},
+					}
+				}
+			}
 		}
 	}
 	return &v1.AdmissionResponse{
@@ -165,6 +198,67 @@ func CopyCCMToCM(configmap *corev1.ConfigMap) error {
 	//add currentCCM
 	ccm.Labels["current"] = "true"
 	_, errs = configuratorClientSet.ConfiguratorV1alpha1().CustomConfigMaps(configmap.Namespace).Update(context.TODO(), ccm, metav1.UpdateOptions{})
+	if errs != nil {
+		return errs
+	}
+	return nil
+}
+
+//copy customSecret to Secret
+func CopyCSToSecret(secret *corev1.Secret) error {
+	var cfg *rest.Config
+	var err error
+	cfg, err = rest.InClusterConfig()
+	//create clientset
+	clientSet, err := kubernetes.NewForConfig(cfg)
+	if err != nil {
+		klog.Error("Error building kubernetes clientset: %s", err.Error(), time.Now().UTC())
+		return err
+	}
+	configuratorClientSet, err := clientset.NewForConfig(cfg)
+	if err != nil {
+		klog.Error("Error building example clientset: %s", err.Error())
+		return err
+	}
+
+	cs, err := configuratorClientSet.ConfiguratorV1alpha1().CustomSecrets(secret.Namespace).Get(context.TODO(), secret.Name+"-"+secret.Annotations["currentCustomSecretVersion"], metav1.GetOptions{})
+	if err != nil {
+		klog.Error("Error getting ccm: %s", err.Error())
+		return err
+	}
+	//copying content
+	secret.Data = cs.Spec.Data
+	cs.Spec.SecretAnnotations["customConfigMap-name"] = cs.Name
+	cs.Spec.SecretAnnotations["deployments"] = secret.Annotations["deployments"]
+	cs.Spec.SecretAnnotations["statefulsets"] = secret.Annotations["statefulsets"]
+	cs.Spec.SecretAnnotations["updateMethod"] = secret.Annotations["updateMethod"]
+	cs.Spec.SecretAnnotations["currentCustomSecretVersion"] = secret.Annotations["currentCustomSecretVersion"]
+	secret.Annotations = cs.Spec.SecretAnnotations
+	//Update secret content based on secret version
+	_, err = clientSet.CoreV1().Secrets(secret.Namespace).Update(context.TODO(), secret, metav1.UpdateOptions{})
+	if err != nil {
+		return err
+	}
+	//getting current ccm
+	label := "name=config-multi-env-files,current=true"
+	listOption := metav1.ListOptions{LabelSelector: label}
+	currentcs, _ := configuratorClientSet.ConfiguratorV1alpha1().CustomSecrets(secret.Namespace).List(context.TODO(), listOption)
+	currentCS := currentcs.Items[0]
+	//remove current label from currentCCM
+	delete(currentCS.Labels, "current")
+	_, errs := configuratorClientSet.ConfiguratorV1alpha1().CustomSecrets(secret.Namespace).Update(context.TODO(), &currentCS, metav1.UpdateOptions{})
+	if errs != nil {
+		return errs
+	}
+
+	//add currentCCM
+	cs.Labels["current"] = "true"
+	delete(cs.Spec.SecretAnnotations, "currentCustomSecretVersion")
+	delete(cs.Spec.SecretAnnotations, "customSecret-name")
+	delete(cs.Spec.SecretAnnotations, "updateMethod")
+	delete(cs.Spec.SecretAnnotations, "deployments")
+	delete(cs.Spec.SecretAnnotations, "statefulsets")
+	_, errs = configuratorClientSet.ConfiguratorV1alpha1().CustomSecrets(secret.Namespace).Update(context.TODO(), cs, metav1.UpdateOptions{})
 	if errs != nil {
 		return errs
 	}

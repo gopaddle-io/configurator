@@ -1,9 +1,14 @@
+{{- if .Values.rbac.create }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   annotations:
     rbac.authorization.kubernetes.io/autoupdate: "true"
   name: "{{ .Release.Name }}-configurator"
+  labels:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    helm.sh/chart: {{ include "configurator.chart" . }}
 rules:
   - apiGroups:
     - configurator.gopaddle.io
@@ -15,6 +20,7 @@ rules:
     - watch
     - update
     - create
+    - delete
   - apiGroups:
     - configurator.gopaddle.io
     resources:
@@ -25,6 +31,7 @@ rules:
     - watch
     - update
     - create
+    - delete
   - apiGroups:
     - apps
     resources:
@@ -53,6 +60,7 @@ rules:
     - ""
     resources:
     - secrets
+    - namespaces
     verbs:
     - create
     - delete
@@ -105,3 +113,4 @@ rules:
     - patch
     - update
 
+{{- end}}

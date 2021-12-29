@@ -149,7 +149,7 @@ func createDeploymentPatch(deployment *appsV1.Deployment) ([]byte, error) {
 						}
 					}
 					if !check {
-						configMap.Annotations["deployments"] = deployment.Name
+						configMap.Annotations["deployments"] = configMap.Annotations["deployments"] + "," + deployment.Name
 					}
 				}
 				configMap, errs := clientSet.CoreV1().ConfigMaps(deployment.Namespace).Update(context.TODO(), configMap, metav1.UpdateOptions{})
@@ -158,6 +158,53 @@ func createDeploymentPatch(deployment *appsV1.Deployment) ([]byte, error) {
 				}
 				addnewAnnotation["ccm-"+configMap.Name] = configMap.Annotations["currentCustomConfigMapVersion"]
 			}
+		} else if volume.Secret != nil {
+			//check already secretName exist or not
+			if deployment.Spec.Template.Annotations["cs-"+volume.Secret.SecretName] == "" || len(deployment.Spec.Template.Annotations) == 0 {
+				//reading secretVersion from Secret
+				//get clusterConf
+				var cfg *rest.Config
+				var err error
+				cfg, err = rest.InClusterConfig()
+				//create clientset
+				clientSet, err := kubernetes.NewForConfig(cfg)
+				if err != nil {
+					klog.Fatalf("Error building kubernetes clientset: %s", err.Error(), time.Now().UTC())
+				}
+				secret, err := clientSet.CoreV1().Secrets(deployment.Namespace).Get(context.TODO(), volume.Secret.SecretName, metav1.GetOptions{})
+				if err != nil {
+					return nil, err
+				}
+				//adding annotation to secret
+				if secret.Annotations["deployments"] == "" {
+					if len(secret.Annotations) == 0 {
+						annotation := make(map[string]string)
+						annotation["deployments"] = deployment.Name
+						secret.Annotations = annotation
+					} else {
+						secret.Annotations["deployments"] = deployment.Name
+					}
+				} else {
+					// check that deployment name already exist in configMapName
+					annotation := secret.Annotations["deployments"]
+					split := strings.Split(annotation, ",")
+					check := false
+					for _, s := range split {
+						if s == deployment.Name {
+							check = true
+						}
+					}
+					if !check {
+						secret.Annotations["deployments"] = secret.Annotations["deployments"] + "," + deployment.Name
+					}
+				}
+				secret, errs := clientSet.CoreV1().Secrets(deployment.Namespace).Update(context.TODO(), secret, metav1.UpdateOptions{})
+				if errs != nil {
+					return nil, errs
+				}
+				addnewAnnotation["cs-"+secret.Name] = secret.Annotations["currentCustomSecretVersion"]
+
+			}
 		}
 	}
 	//remove annotation in deployment if that configmap name is not there
@@ -165,11 +212,25 @@ func createDeploymentPatch(deployment *appsV1.Deployment) ([]byte, error) {
 	removeAnnotation := make(map[string]string)
 	if len(deployment.Spec.Template.Annotations) != 0 {
 		for key, value := range deployment.Spec.Template.Annotations {
+			//checking customConfigMap annotation
 			if strings.Contains(key, "ccm-") {
 				check := false
 				for _, volume := range deployment.Spec.Template.Spec.Volumes {
 					if volume.ConfigMap != nil {
 						if key == "ccm-"+volume.ConfigMap.Name {
+							check = true
+							deploymentAnnotation[key] = value
+						}
+					}
+				}
+				if !check {
+					removeAnnotation[key] = value
+				}
+			} else if strings.Contains(key, "cs-") { //checking customSecret annotations
+				check := false
+				for _, volume := range deployment.Spec.Template.Spec.Volumes {
+					if volume.Secret != nil {
+						if key == "cs-"+volume.Secret.SecretName {
 							check = true
 							deploymentAnnotation[key] = value
 						}

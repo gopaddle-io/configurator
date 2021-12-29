@@ -26,6 +26,7 @@ import (
 type ConfiguratorV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	CustomConfigMapsGetter
+	CustomSecretsGetter
 }
 
 // ConfiguratorV1alpha1Client is used to interact with features provided by the configurator.gopaddle.io group.
@@ -35,6 +36,10 @@ type ConfiguratorV1alpha1Client struct {
 
 func (c *ConfiguratorV1alpha1Client) CustomConfigMaps(namespace string) CustomConfigMapInterface {
 	return newCustomConfigMaps(c, namespace)
+}
+
+func (c *ConfiguratorV1alpha1Client) CustomSecrets(namespace string) CustomSecretInterface {
+	return newCustomSecrets(c, namespace)
 }
 
 // NewForConfig creates a new ConfiguratorV1alpha1Client for the given config.

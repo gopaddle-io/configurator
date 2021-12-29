@@ -1,21 +1,84 @@
 installCrds: true
 
-image:
-  repository: gopaddle/configurator
+# Select what to deploy
+deployments:
+  # configurator controller is the configurator controller deployment it controller the verso=ion creation of CCM/CS
+  configuratorController: true
+  # admissionController enforces validation/mutation of the deployment/statefulset
+  admissionController: true
 
-  ## Defaults to .Chart.AppVersion
-  # tag: latest
+configuratorController:
+  image:
+    repository: trov/configurator
 
-  ## Always because of `latest`.
-  ## This will likely change to IfNotPresent when releases are properly numbered.
+    ## Defaults to .Chart.AppVersion
+    tag: 1.8
+
+    initRepository: trov/controllerinit
+
+    ## Defaults to .Chart.AppVersion
+    initTag: 1.3
+  
+
+    ## Always because of `latest`.
+    ## This will likely change to IfNotPresent when releases are properly numbered.
   pullPolicy: Always
 
-replicas: 1
+  replicas: 1
 
-resources: {}
+  resources: {}
   # limits:
   #   cpu: 1
   #   memory: 1Gi
   # requests:
   #   cpu: 5m
   #   memory: 500Mi
+
+# admissionController is the controller for configurator admission controller
+# name is derived from chart
+admissionController:
+  name: "controllerwebhook"
+  image:
+    repository: trov/controllerwebhook
+    tag: 1.1
+  imagePullPolicy: IfNotPresent
+  # imagePullSecrets is an optional list of references to secrets  to use for pulling images
+  imagePullSecrets: []
+
+
+# admissionCA can be used to override the Certs that will be used
+# to sign the keys used by the admsission operator.
+admissionCA:
+  # disable if manually creating certs
+  # provide cert and key via --set-file
+  create: true
+  # A base64 encoded PEM format certificate
+  cert:
+  # A base64 encoded PEM format private key
+  key:
+  # Expiry time of CA in days for generated certs
+  expiration: 365
+
+# secret with client certs mounted within the admission controller.
+admissionSecret:
+  create: true
+  # name of the secret (auto-generated)
+  name: configuratorwebhook-secret
+  # PEM format certificate (auto-generated)
+  # override via --set-file
+  cert:
+  # PEM format certificate (auto-generated)
+  # override via --set-file
+  key:
+
+admissionService:
+  # create determines if service is created
+  create: true
+  # name of the service (auto-generated)
+  name:
+  # port service exposes
+  port: 443
+  targetPort: 8015
+
+rbac: 
+   create: true
