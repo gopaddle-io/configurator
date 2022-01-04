@@ -207,6 +207,204 @@ func createDeploymentPatch(deployment *appsV1.Deployment) ([]byte, error) {
 			}
 		}
 	}
+	//add new annotation form envfrom container
+	for _, container := range deployment.Spec.Template.Spec.Containers {
+		for _, env := range container.EnvFrom {
+			if env.ConfigMapRef != nil {
+				if deployment.Spec.Template.Annotations["ccm-"+env.ConfigMapRef.Name] == "" || len(deployment.Spec.Template.Annotations) == 0 {
+					//reading configmapVersion from configmap
+					//get clusterConf
+					var cfg *rest.Config
+					var err error
+					cfg, err = rest.InClusterConfig()
+					//create clientset
+					clientSet, err := kubernetes.NewForConfig(cfg)
+					if err != nil {
+						klog.Fatalf("Error building kubernetes clientset: %s", err.Error(), time.Now().UTC())
+					}
+					configMap, err := clientSet.CoreV1().ConfigMaps(deployment.Namespace).Get(context.TODO(), env.ConfigMapRef.Name, metav1.GetOptions{})
+					if err != nil {
+						return nil, err
+					}
+					//adding annotation to configMap
+					if configMap.Annotations["deployments"] == "" {
+						if len(configMap.Annotations) == 0 {
+							annotation := make(map[string]string)
+							annotation["deployments"] = deployment.Name
+							configMap.Annotations = annotation
+						} else {
+							configMap.Annotations["deployments"] = deployment.Name
+						}
+					} else {
+						// check that deployment name already exist in configMapName
+						annotation := configMap.Annotations["deployments"]
+						split := strings.Split(annotation, ",")
+						check := false
+						for _, s := range split {
+							if s == deployment.Name {
+								check = true
+							}
+						}
+						if !check {
+							configMap.Annotations["deployments"] = configMap.Annotations["deployments"] + "," + deployment.Name
+						}
+					}
+					configMap, errs := clientSet.CoreV1().ConfigMaps(deployment.Namespace).Update(context.TODO(), configMap, metav1.UpdateOptions{})
+					if errs != nil {
+						return nil, errs
+					}
+					addnewAnnotation["ccm-"+configMap.Name] = configMap.Annotations["currentCustomConfigMapVersion"]
+				}
+			} else if env.SecretRef != nil {
+				//check already secretName exist or not
+				if deployment.Spec.Template.Annotations["cs-"+env.SecretRef.Name] == "" || len(deployment.Spec.Template.Annotations) == 0 {
+					//reading secretVersion from Secret
+					//get clusterConf
+					var cfg *rest.Config
+					var err error
+					cfg, err = rest.InClusterConfig()
+					//create clientset
+					clientSet, err := kubernetes.NewForConfig(cfg)
+					if err != nil {
+						klog.Fatalf("Error building kubernetes clientset: %s", err.Error(), time.Now().UTC())
+					}
+					secret, err := clientSet.CoreV1().Secrets(deployment.Namespace).Get(context.TODO(), env.SecretRef.Name, metav1.GetOptions{})
+					if err != nil {
+						return nil, err
+					}
+					//adding annotation to secret
+					if secret.Annotations["deployments"] == "" {
+						if len(secret.Annotations) == 0 {
+							annotation := make(map[string]string)
+							annotation["deployments"] = deployment.Name
+							secret.Annotations = annotation
+						} else {
+							secret.Annotations["deployments"] = deployment.Name
+						}
+					} else {
+						// check that deployment name already exist in configMapName
+						annotation := secret.Annotations["deployments"]
+						split := strings.Split(annotation, ",")
+						check := false
+						for _, s := range split {
+							if s == deployment.Name {
+								check = true
+							}
+						}
+						if !check {
+							secret.Annotations["deployments"] = secret.Annotations["deployments"] + "," + deployment.Name
+						}
+					}
+					secret, errs := clientSet.CoreV1().Secrets(deployment.Namespace).Update(context.TODO(), secret, metav1.UpdateOptions{})
+					if errs != nil {
+						return nil, errs
+					}
+					addnewAnnotation["cs-"+secret.Name] = secret.Annotations["currentCustomSecretVersion"]
+
+				}
+			}
+		}
+	}
+
+	//add new annotation form envfrom initContainer
+	for _, initContainer := range deployment.Spec.Template.Spec.InitContainers {
+		for _, env := range initContainer.EnvFrom {
+			if env.ConfigMapRef != nil {
+				if deployment.Spec.Template.Annotations["ccm-"+env.ConfigMapRef.Name] == "" || len(deployment.Spec.Template.Annotations) == 0 {
+					//reading configmapVersion from configmap
+					//get clusterConf
+					var cfg *rest.Config
+					var err error
+					cfg, err = rest.InClusterConfig()
+					//create clientset
+					clientSet, err := kubernetes.NewForConfig(cfg)
+					if err != nil {
+						klog.Fatalf("Error building kubernetes clientset: %s", err.Error(), time.Now().UTC())
+					}
+					configMap, err := clientSet.CoreV1().ConfigMaps(deployment.Namespace).Get(context.TODO(), env.ConfigMapRef.Name, metav1.GetOptions{})
+					if err != nil {
+						return nil, err
+					}
+					//adding annotation to configMap
+					if configMap.Annotations["deployments"] == "" {
+						if len(configMap.Annotations) == 0 {
+							annotation := make(map[string]string)
+							annotation["deployments"] = deployment.Name
+							configMap.Annotations = annotation
+						} else {
+							configMap.Annotations["deployments"] = deployment.Name
+						}
+					} else {
+						// check that deployment name already exist in configMapName
+						annotation := configMap.Annotations["deployments"]
+						split := strings.Split(annotation, ",")
+						check := false
+						for _, s := range split {
+							if s == deployment.Name {
+								check = true
+							}
+						}
+						if !check {
+							configMap.Annotations["deployments"] = configMap.Annotations["deployments"] + "," + deployment.Name
+						}
+					}
+					configMap, errs := clientSet.CoreV1().ConfigMaps(deployment.Namespace).Update(context.TODO(), configMap, metav1.UpdateOptions{})
+					if errs != nil {
+						return nil, errs
+					}
+					addnewAnnotation["ccm-"+configMap.Name] = configMap.Annotations["currentCustomConfigMapVersion"]
+				}
+			} else if env.SecretRef != nil {
+				//check already secretName exist or not
+				if deployment.Spec.Template.Annotations["cs-"+env.SecretRef.Name] == "" || len(deployment.Spec.Template.Annotations) == 0 {
+					//reading secretVersion from Secret
+					//get clusterConf
+					var cfg *rest.Config
+					var err error
+					cfg, err = rest.InClusterConfig()
+					//create clientset
+					clientSet, err := kubernetes.NewForConfig(cfg)
+					if err != nil {
+						klog.Fatalf("Error building kubernetes clientset: %s", err.Error(), time.Now().UTC())
+					}
+					secret, err := clientSet.CoreV1().Secrets(deployment.Namespace).Get(context.TODO(), env.SecretRef.Name, metav1.GetOptions{})
+					if err != nil {
+						return nil, err
+					}
+					//adding annotation to secret
+					if secret.Annotations["deployments"] == "" {
+						if len(secret.Annotations) == 0 {
+							annotation := make(map[string]string)
+							annotation["deployments"] = deployment.Name
+							secret.Annotations = annotation
+						} else {
+							secret.Annotations["deployments"] = deployment.Name
+						}
+					} else {
+						// check that deployment name already exist in configMapName
+						annotation := secret.Annotations["deployments"]
+						split := strings.Split(annotation, ",")
+						check := false
+						for _, s := range split {
+							if s == deployment.Name {
+								check = true
+							}
+						}
+						if !check {
+							secret.Annotations["deployments"] = secret.Annotations["deployments"] + "," + deployment.Name
+						}
+					}
+					secret, errs := clientSet.CoreV1().Secrets(deployment.Namespace).Update(context.TODO(), secret, metav1.UpdateOptions{})
+					if errs != nil {
+						return nil, errs
+					}
+					addnewAnnotation["cs-"+secret.Name] = secret.Annotations["currentCustomSecretVersion"]
+
+				}
+			}
+		}
+	}
+
 	//remove annotation in deployment if that configmap name is not there
 	deploymentAnnotation := make(map[string]string)
 	removeAnnotation := make(map[string]string)
@@ -215,11 +413,35 @@ func createDeploymentPatch(deployment *appsV1.Deployment) ([]byte, error) {
 			//checking customConfigMap annotation
 			if strings.Contains(key, "ccm-") {
 				check := false
+				//check configMap Name in volume
 				for _, volume := range deployment.Spec.Template.Spec.Volumes {
 					if volume.ConfigMap != nil {
 						if key == "ccm-"+volume.ConfigMap.Name {
 							check = true
 							deploymentAnnotation[key] = value
+						}
+					}
+				}
+				//check configMap Name in container
+				for _, container := range deployment.Spec.Template.Spec.Containers {
+					for _, env := range container.EnvFrom {
+						if env.ConfigMapRef != nil {
+							if key == "ccm-"+env.ConfigMapRef.Name {
+								check = true
+								deploymentAnnotation[key] = value
+							}
+						}
+					}
+				}
+
+				//check configMap Name in initContainer
+				for _, initContainer := range deployment.Spec.Template.Spec.InitContainers {
+					for _, env := range initContainer.EnvFrom {
+						if env.ConfigMapRef != nil {
+							if key == "ccm-"+env.ConfigMapRef.Name {
+								check = true
+								deploymentAnnotation[key] = value
+							}
 						}
 					}
 				}
@@ -236,6 +458,31 @@ func createDeploymentPatch(deployment *appsV1.Deployment) ([]byte, error) {
 						}
 					}
 				}
+
+				//check configMap Name in container
+				for _, container := range deployment.Spec.Template.Spec.Containers {
+					for _, env := range container.EnvFrom {
+						if env.SecretRef != nil {
+							if key == "cs-"+env.SecretRef.Name {
+								check = true
+								deploymentAnnotation[key] = value
+							}
+						}
+					}
+				}
+
+				//check configMap Name in initContainer
+				for _, initContainer := range deployment.Spec.Template.Spec.InitContainers {
+					for _, env := range initContainer.EnvFrom {
+						if env.SecretRef != nil {
+							if key == "cs-"+env.SecretRef.Name {
+								check = true
+								deploymentAnnotation[key] = value
+							}
+						}
+					}
+				}
+
 				if !check {
 					removeAnnotation[key] = value
 				}

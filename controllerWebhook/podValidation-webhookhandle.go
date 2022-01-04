@@ -148,6 +148,80 @@ func ConfigValidation(ar *v1.AdmissionReview) *v1.AdmissionResponse {
 			}
 		}
 	}
+
+	//check the envfrom
+	for _, container := range pod.Spec.Containers {
+		for _, env := range container.EnvFrom {
+			if env.ConfigMapRef != nil {
+				//reading configmapVersion from configmap
+				//get clusterConf
+				var cfg *rest.Config
+				var err error
+				cfg, err = rest.InClusterConfig()
+				//create clientset
+				clientSet, err := kubernetes.NewForConfig(cfg)
+				if err != nil {
+					klog.Error("Error building kubernetes clientset: %s", err.Error(), time.Now().UTC())
+				}
+
+				configMap, err := clientSet.CoreV1().ConfigMaps(pod.Namespace).Get(context.TODO(), env.ConfigMapRef.Name, metav1.GetOptions{})
+				if err != nil {
+					return &v1.AdmissionResponse{
+						Result: &metav1.Status{
+							Message: err.Error(),
+						},
+					}
+				}
+				if pod.Annotations["ccm-"+env.ConfigMapRef.Name] == configMap.Annotations["currentCustomConfigMapVersion"] {
+					klog.Info("customConfigMap version is equal to pod configVersion")
+				} else {
+					//copy configMap
+					configMap.Annotations["currentCustomConfigMapVersion"] = pod.Annotations["ccm-"+env.ConfigMapRef.Name]
+					err := CopyCCMToCM(configMap)
+					if err != nil {
+						return &v1.AdmissionResponse{
+							Result: &metav1.Status{
+								Message: err.Error(),
+							},
+						}
+					}
+				}
+			} else if env.SecretRef != nil {
+				//get clusterConf
+				var cfg *rest.Config
+				var err error
+				cfg, err = rest.InClusterConfig()
+				//create clientset
+				clientSet, err := kubernetes.NewForConfig(cfg)
+				if err != nil {
+					klog.Error("Error building kubernetes clientset: %s", err.Error(), time.Now().UTC())
+				}
+
+				secret, err := clientSet.CoreV1().Secrets(pod.Namespace).Get(context.TODO(), env.SecretRef.Name, metav1.GetOptions{})
+				if err != nil {
+					return &v1.AdmissionResponse{
+						Result: &metav1.Status{
+							Message: err.Error(),
+						},
+					}
+				}
+				if pod.Annotations["cs-"+env.SecretRef.Name] == secret.Annotations["currentCustomSecretVersion"] {
+					klog.Info("customSecret version is equal to pod SecretVersion")
+				} else {
+					//copy CS to secret
+					secret.Annotations["currentCustomSecretVersion"] = pod.Annotations["cs-"+env.SecretRef.Name]
+					err := CopyCSToSecret(secret)
+					if err != nil {
+						return &v1.AdmissionResponse{
+							Result: &metav1.Status{
+								Message: err.Error(),
+							},
+						}
+					}
+				}
+			}
+		}
+	}
 	return &v1.AdmissionResponse{
 		Allowed: true,
 	}
