@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"regexp"
 	"time"
+	b64 "encoding/base64"
 
 	customConfigMapv1alpha1 "github.com/gopaddle-io/configurator/apis/configurator.gopaddle.io/v1alpha1"
 	customSecretv1alpha1 "github.com/gopaddle-io/configurator/apis/configurator.gopaddle.io/v1alpha1"
