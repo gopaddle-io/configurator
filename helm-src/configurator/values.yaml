@@ -9,15 +9,15 @@ deployments:
 
 configuratorController:
   image:
-    repository: trov/configurator
+    repository: gopaddle/configurator-controller
 
     ## Defaults to .Chart.AppVersion
-    tag: 1.8
+    tag: v0.1.1
 
-    initRepository: trov/controllerinit
+    initRepository: gopaddle/controllerinit
 
     ## Defaults to .Chart.AppVersion
-    initTag: 1.3
+    initTag: v0.1.1
   
 
     ## Always because of `latest`.
@@ -39,8 +39,8 @@ configuratorController:
 admissionController:
   name: "controllerwebhook"
   image:
-    repository: trov/controllerwebhook
-    tag: 1.1
+    repository: gopaddle/controllerwebhook
+    tag: v0.1.1
   imagePullPolicy: IfNotPresent
   # imagePullSecrets is an optional list of references to secrets  to use for pulling images
   imagePullSecrets: []

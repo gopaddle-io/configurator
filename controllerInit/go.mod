@@ -3,7 +3,7 @@ module github.com/gopaddle-io/configurator/controllerInit
 go 1.16
 
 require (
-	github.com/gopaddle-io/configurator v0.0.2
+	github.com/gopaddle-io/configurator v0.0.2-a
 	k8s.io/api v0.20.2
 	k8s.io/apimachinery v0.20.2
 	k8s.io/client-go v11.0.0+incompatible
