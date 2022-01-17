@@ -80,14 +80,12 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	// check the CCM_version in the configMap if the Version not exist.
 	// it create new version of CCM and add annotation to that configMap
 	if currentCS_Version == "" {
-
 		var csList customSecretv1alpha1.CustomSecretList
 		err := r.List(ctx, &csList, client.MatchingLabels{"name": secret.Name, "current": "true"}, client.InNamespace(secret.Namespace))
 		if err != nil {
 			log.Error(err, secretlogname+" Unable to get customSecret list")
 			return ctrl.Result{}, err
 		}
-
 		if len(csList.Items) == 0 {
 			cs, version := newCustomSecret(&secret)
 			er := r.Create(ctx, cs)
@@ -113,7 +111,7 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 				r.EventRecorder.Eventf(&secret, corev1.EventTypeWarning, "FailedAddingCustomSecretVersion", "Error in adding CustomSecret version: %v", errs.Error())
 				return ctrl.Result{}, errs
 			}
-			r.EventRecorder.Eventf(&secret, corev1.EventTypeNormal, "configMap", "update ccm content %v to configMap %v", secret.Name, cs.Name)
+			r.EventRecorder.Eventf(&secret, corev1.EventTypeNormal, "configMap", "update cs content %v to secret %v", secret.Name, cs.Name)
 		} else {
 			if len(csList.Items) == 1 {
 				secretAnnotation := make(map[string]string)
@@ -125,31 +123,60 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 				delete(secretAnnotation, "deployments")
 				delete(secretAnnotation, "statefulsets")
 				//content of configMap and customSecret are not same create newCS and make that as current
-				if reflect.DeepEqual(secret.Data, csList.Items[0].Spec.Data) == false || secret.Type != csList.Items[0].Spec.Type || reflect.DeepEqual(secretAnnotation, csList.Items[0].Spec.SecretAnnotations) == false {
-					errs := r.CreateNewCS(ctx, &secret, &csList.Items[0])
-					if errs != nil {
-						return ctrl.Result{}, errs
-					}
+				if len(csList.Items[0].Spec.SecretAnnotations) != 0 {
+					if reflect.DeepEqual(secret.Data, csList.Items[0].Spec.Data) == false || secret.Type != csList.Items[0].Spec.Type || reflect.DeepEqual(secretAnnotation, csList.Items[0].Spec.SecretAnnotations) == false {
+						errs := r.CreateNewCS(ctx, &secret, &csList.Items[0])
+						if errs != nil {
+							return ctrl.Result{}, errs
+						}
 
-				} else {
-					//updating configMap with versionInfo
-					if len(secret.Annotations) == 0 {
-						annotation := make(map[string]string)
-						annotation["currentCustomSecretVersion"] = csList.Items[0].Annotations["customSecretVersion"]
-						annotation["customSecret-name"] = csList.Items[0].Name
-						annotation["updateMethod"] = "ignoreWhenShared"
-						secret.Annotations = annotation
 					} else {
-						secret.Annotations["currentCustomSecretVersion"] = csList.Items[0].Annotations["customSecretVersion"]
-						secret.Annotations["customSecret-name"] = csList.Items[0].Name
-						secret.Annotations["updateMethod"] = "ignoreWhenShared"
+						//updating configMap with versionInfo
+						if len(secret.Annotations) == 0 {
+							annotation := make(map[string]string)
+							annotation["currentCustomSecretVersion"] = csList.Items[0].Annotations["customSecretVersion"]
+							annotation["customSecret-name"] = csList.Items[0].Name
+							annotation["updateMethod"] = "ignoreWhenShared"
+							secret.Annotations = annotation
+						} else {
+							secret.Annotations["currentCustomSecretVersion"] = csList.Items[0].Annotations["customSecretVersion"]
+							secret.Annotations["customSecret-name"] = csList.Items[0].Name
+							secret.Annotations["updateMethod"] = "ignoreWhenShared"
+						}
+						errs := r.Update(ctx, &secret)
+						if errs != nil {
+							r.EventRecorder.Eventf(&secret, corev1.EventTypeWarning, "FailedAddingCustomSecretVersion", "Error in adding CustomSecret version: %v", errs.Error())
+							return ctrl.Result{}, errs
+						}
+						r.EventRecorder.Eventf(&secret, corev1.EventTypeNormal, "secret", "update cs content %v to secret %v", secret.Name, csList.Items[0].Name)
 					}
-					errs := r.Update(ctx, &secret)
-					if errs != nil {
-						r.EventRecorder.Eventf(&secret, corev1.EventTypeWarning, "FailedAddingCustomSecretVersion", "Error in adding CustomSecret version: %v", errs.Error())
-						return ctrl.Result{}, errs
+				} else {
+					if reflect.DeepEqual(secret.Data, csList.Items[0].Spec.Data) == false || secret.Type != csList.Items[0].Spec.Type {
+						errs := r.CreateNewCS(ctx, &secret, &csList.Items[0])
+						if errs != nil {
+							return ctrl.Result{}, errs
+						}
+
+					} else {
+						//updating configMap with versionInfo
+						if len(secret.Annotations) == 0 {
+							annotation := make(map[string]string)
+							annotation["currentCustomSecretVersion"] = csList.Items[0].Annotations["customSecretVersion"]
+							annotation["customSecret-name"] = csList.Items[0].Name
+							annotation["updateMethod"] = "ignoreWhenShared"
+							secret.Annotations = annotation
+						} else {
+							secret.Annotations["currentCustomSecretVersion"] = csList.Items[0].Annotations["customSecretVersion"]
+							secret.Annotations["customSecret-name"] = csList.Items[0].Name
+							secret.Annotations["updateMethod"] = "ignoreWhenShared"
+						}
+						errs := r.Update(ctx, &secret)
+						if errs != nil {
+							r.EventRecorder.Eventf(&secret, corev1.EventTypeWarning, "FailedAddingCustomSecretVersion", "Error in adding CustomSecret version: %v", errs.Error())
+							return ctrl.Result{}, errs
+						}
+						r.EventRecorder.Eventf(&secret, corev1.EventTypeNormal, "secret", "update cs content %v to secret %v", secret.Name, csList.Items[0].Name)
 					}
-					r.EventRecorder.Eventf(&secret, corev1.EventTypeNormal, "secret", "update ccm content %v to configMap %v", secret.Name, csList.Items[0].Name)
 				}
 			}
 		}
@@ -269,12 +296,21 @@ func (r *SecretReconciler) UpdateSecret(ctx context.Context, secret *corev1.Secr
 			delete(secretAnnotation, "deployments")
 			delete(secretAnnotation, "statefulsets")
 			//content of configMap and customSecret are not same create newCS and make that as current
-			if reflect.DeepEqual(secret.Data, csList.Items[0].Spec.Data) == false || secret.Type != csList.Items[0].Spec.Type || reflect.DeepEqual(secretAnnotation, csList.Items[0].Spec.SecretAnnotations) == false {
-				errs := r.CreateNewCS(ctx, secret, &csList.Items[0])
-				if errs != nil {
-					return errs
-				}
+			if len(csList.Items[0].Spec.SecretAnnotations) != 0 {
+				if reflect.DeepEqual(secret.Data, csList.Items[0].Spec.Data) == false || secret.Type != csList.Items[0].Spec.Type || reflect.DeepEqual(secretAnnotation, csList.Items[0].Spec.SecretAnnotations) == false {
+					errs := r.CreateNewCS(ctx, secret, &csList.Items[0])
+					if errs != nil {
+						return errs
+					}
 
+				}
+			} else {
+				if reflect.DeepEqual(secret.Data, csList.Items[0].Spec.Data) == false || secret.Type != csList.Items[0].Spec.Type {
+					errs := r.CreateNewCS(ctx, secret, &csList.Items[0])
+					if errs != nil {
+						return errs
+					}
+				}
 			}
 		}
 	}
@@ -321,7 +357,7 @@ func (r *SecretReconciler) CopyCSToSecret(ctx context.Context, secret *corev1.Se
 		return errs
 	}
 
-	r.EventRecorder.Eventf(secret, corev1.EventTypeNormal, "secret", "update ccm content %v to configMap %v", cs.Name, secret.Name)
+	r.EventRecorder.Eventf(secret, corev1.EventTypeNormal, "secret", "update cs content %v to secret %v", cs.Name, secret.Name)
 	return nil
 }
 
@@ -330,30 +366,36 @@ func (r *SecretReconciler) CreateNewCS(ctx context.Context, secret *corev1.Secre
 	delete(currentcs.Labels, "current")
 	errs := r.Update(ctx, currentcs)
 	if errs != nil {
-		r.EventRecorder.Eventf(currentcs, corev1.EventTypeWarning, "FailedUpdatingCustomSecret", "Error Updating CustomSecret: %v", errs)
+		r.EventRecorder.Eventf(currentcs, corev1.EventTypeWarning, "FailedUpdatingCustomSecret", "Error Updating CustomSecret in removing curret label level: %v", errs)
 		return errs
 	}
 
 	//delete latest label from latest ccm
 	//getting latest ccm
 	latestcs := customSecretv1alpha1.CustomSecretList{}
-	err := r.List(ctx, &latestcs, client.MatchingLabels{"name": secret.Name, "latest": "true"}, client.InNamespace(secret.Namespace))
-	if err != nil {
-		r.EventRecorder.Eventf(secret, corev1.EventTypeWarning, "FailedUpdatingCustomSecret", "Error Updating CustomSecret: %v", errs)
-		return err
-	}
-	delete(latestcs.Items[0].Labels, "latest")
-	errs = r.Update(ctx, &latestcs.Items[0])
-	if errs != nil {
-		r.EventRecorder.Eventf(secret, corev1.EventTypeWarning, "FailedUpdatingCustomSecret", "Error Updating CustomSecret: %v", errs)
-		//reverting the previous change
-		currentcs.Labels["current"] = "true"
-		errs := r.Update(ctx, currentcs)
-		if errs != nil {
-			r.EventRecorder.Eventf(secret, corev1.EventTypeWarning, "FailedUpdatingCustomSecret", "Error Updating CustomSecret: %v", errs)
-			return errs
+	for i := 0; i <= 5; i++ {
+		err := r.List(ctx, &latestcs, client.MatchingLabels{"name": secret.Name, "latest": "true"}, client.InNamespace(secret.Namespace))
+		if err != nil {
+			r.EventRecorder.Eventf(secret, corev1.EventTypeWarning, "FailedUpdatingCustomSecret", "Error Updating CustomSecret in getting latest label level:: %v", errs)
 		}
-		return errs
+		delete(latestcs.Items[0].Labels, "latest")
+		errs = r.Update(ctx, &latestcs.Items[0])
+		if errs != nil {
+			r.EventRecorder.Eventf(secret, corev1.EventTypeWarning, "FailedUpdatingCustomSecret", "Error Updating CustomSecret in removing latest label level:: %v", errs)
+			//reverting the previous change
+			if !strings.Contains(errs.Error(), "changes to the latest version and try again") {
+				currentcs.Labels["current"] = "true"
+				errs := r.Update(ctx, currentcs)
+				if errs != nil {
+					r.EventRecorder.Eventf(secret, corev1.EventTypeWarning, "FailedUpdatingCustomSecret", "Error Updating CustomSecret in adding current label level:: %v", errs)
+					return errs
+				}
+				return errs
+			}
+		}
+		if errs == nil {
+			break
+		}
 	}
 
 	csNew, version := newCustomSecret(secret)
@@ -380,11 +422,11 @@ func (r *SecretReconciler) CreateNewCS(ctx context.Context, secret *corev1.Secre
 	secret.Annotations["currentCustomSecretVersion"] = version
 	secret.Annotations["customSecret-name"] = csNew.Name
 	secret.Annotations["updateMethod"] = "ignoreWhenShared"
-	err = r.Update(ctx, secret)
+	err := r.Update(ctx, secret)
 	if err != nil {
 		return err
 	}
-	r.EventRecorder.Eventf(secret, corev1.EventTypeNormal, "updateSecret", "update ccm version %v and name %v", version, csNew.Name)
+	r.EventRecorder.Eventf(secret, corev1.EventTypeNormal, "updateSecret", "update cs version %v and name %v", version, csNew.Name)
 
 	//trigger rolling Update for kind=deployment
 	if secret.Annotations["deployments"] != "" {
