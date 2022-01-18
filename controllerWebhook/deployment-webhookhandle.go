@@ -498,27 +498,43 @@ func createDeploymentPatch(deployment *appsV1.Deployment) ([]byte, error) {
 func updateAnnotation(target map[string]string, added map[string]string, remove map[string]string) (patch []patchOperation) {
 	//replace the target patch
 	for tkey, tval := range target {
+		// to handle forward slash in key name
+		//Replace the forward slash (/) in kubernetes.io/ingress.class with ~1
+		key := ""
+		if strings.Contains(tkey, "/") {
+			key = strings.Replace(tkey, "/", "~1", -1)
+		} else {
+			key = tkey
+		}
 		patch = append(patch, patchOperation{
-			Op:    "replace",
-			Path:  "/spec/template/metadata/annotations/" + tkey,
+			Op:    "add",
+			Path:  "/spec/template/metadata/annotations/" + key,
 			Value: tval,
 		})
 	}
 
 	//patch new annotation or replace the annotation
 	for key, value := range added {
+		// to handle forward slash in key name
+		//Replace the forward slash (/) in kubernetes.io/ingress.class with ~1
+		akey := ""
+		if strings.Contains(key, "/") {
+			akey = strings.Replace(key, "/", "~1", -1)
+		} else {
+			akey = key
+		}
 		if target == nil || len(target) == 0 {
 			patch = append(patch, patchOperation{
 				Op:   "add",
 				Path: "/spec/template/metadata/annotations",
 				Value: map[string]string{
-					key: value,
+					akey: value,
 				},
 			})
 		} else {
 			patch = append(patch, patchOperation{
 				Op:    "replace",
-				Path:  "/spec/template/metadata/annotations/" + key,
+				Path:  "/spec/template/metadata/annotations/" + akey,
 				Value: value,
 			})
 		}
@@ -526,9 +542,17 @@ func updateAnnotation(target map[string]string, added map[string]string, remove 
 	}
 	//remove unused ccm annotation
 	for key, value := range remove {
+		// to handle forward slash in key name
+		//Replace the forward slash (/) in kubernetes.io/ingress.class with ~1
+		akey := ""
+		if strings.Contains(key, "/") {
+			akey = strings.Replace(key, "/", "~1", -1)
+		} else {
+			akey = key
+		}
 		patch = append(patch, patchOperation{
 			Op:    "remove",
-			Path:  "/spec/template/metadata/annotations/" + key,
+			Path:  "/spec/template/metadata/annotations/" + akey,
 			Value: value,
 		})
 	}
