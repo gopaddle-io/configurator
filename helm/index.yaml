@@ -3,9 +3,10 @@ entries:
   configurator:
   - apiVersion: v2
     appVersion: latest
-    created: "2022-01-07T12:54:41.927356357+05:30"
-    description: Helm chart for installing configurator CRDs, Admission Controller & Custom Controller
-    digest: fef8e4a0a388b6caf8960da4d838e2db606c88c780ee20c890f013c0f1d84c82
+    created: "2022-01-17T15:42:33.808641956+05:30"
+    description: Helm chart for installing configurator CRDs, Admission Controller
+      & Custom Controller
+    digest: c6d09166191b6c09583a1d98bf32bb816cc352f314489722b16ce2a59fa4279e
     name: configurator
     type: application
     urls:
@@ -13,7 +14,7 @@ entries:
     version: 0.4.0-alpha
   - apiVersion: v2
     appVersion: latest
-    created: "2022-01-07T12:54:41.869934969+05:30"
+    created: "2022-01-17T15:42:33.808068456+05:30"
     description: Helm chart for installing configurator CRDs & Custom Controller
     digest: c5b81a2a13e6711770577fff323d0a8b974f8f76029f68c96ee20d756ca1140f
     name: configurator
@@ -23,7 +24,7 @@ entries:
     version: 0.3.0-alpha
   - apiVersion: v2
     appVersion: latest
-    created: "2022-01-07T12:54:41.868447247+05:30"
+    created: "2022-01-17T15:42:33.807565655+05:30"
     description: Helm chart for installing configurator CRDs & Custom Controller
     digest: e4a5fc080a5843b69dee563b09f1910493b51bdc5640296c0541aa12b454501c
     name: configurator
@@ -33,7 +34,7 @@ entries:
     version: 0.2.0-alpha
   - apiVersion: v2
     appVersion: 1.16.0
-    created: "2022-01-07T12:54:41.864472625+05:30"
+    created: "2022-01-17T15:42:33.806990422+05:30"
     description: Helm chart for installing configurator CRDs & Custom Controller
     digest: 63d1fa4baf7a2c04e568b6a332d7f019cae3a4e6190b063b7a1f85eac8c966e4
     name: configurator
@@ -41,4 +42,4 @@ entries:
     urls:
     - configurator-0.1.0.tgz
     version: 0.1.0
-generated: "2022-01-07T12:54:41.862579784+05:30"
+generated: "2022-01-17T15:42:33.80608654+05:30"
