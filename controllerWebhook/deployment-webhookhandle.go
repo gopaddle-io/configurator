@@ -491,6 +491,9 @@ func createDeploymentPatch(deployment *appsV1.Deployment) ([]byte, error) {
 			}
 		}
 	}
+	//it to handle the deployment in pod validation
+	addnewAnnotation["config-sync-controller"] = "configurator"
+
 	patch = append(patch, updateAnnotation(deploymentAnnotation, addnewAnnotation, removeAnnotation)...)
 	return json.Marshal(patch)
 }
@@ -514,6 +517,8 @@ func updateAnnotation(target map[string]string, added map[string]string, remove 
 	}
 
 	//patch new annotation or replace the annotation
+	//it check patch add operation first time
+	checkAdd := false
 	for key, value := range added {
 		// to handle forward slash in key name
 		//Replace the forward slash (/) in kubernetes.io/ingress.class with ~1
@@ -523,14 +528,23 @@ func updateAnnotation(target map[string]string, added map[string]string, remove 
 		} else {
 			akey = key
 		}
-		if target == nil || len(target) == 0 {
-			patch = append(patch, patchOperation{
-				Op:   "add",
-				Path: "/spec/template/metadata/annotations",
-				Value: map[string]string{
-					akey: value,
-				},
-			})
+		if !checkAdd {
+			if target == nil || len(target) == 0 {
+				checkAdd = true
+				patch = append(patch, patchOperation{
+					Op:   "add",
+					Path: "/spec/template/metadata/annotations",
+					Value: map[string]string{
+						akey: value,
+					},
+				})
+			} else {
+				patch = append(patch, patchOperation{
+					Op:    "replace",
+					Path:  "/spec/template/metadata/annotations/" + akey,
+					Value: value,
+				})
+			}
 		} else {
 			patch = append(patch, patchOperation{
 				Op:    "replace",

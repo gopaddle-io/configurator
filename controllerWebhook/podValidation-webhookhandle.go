@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
 
 	clientset "github.com/gopaddle-io/configurator/pkg/client/clientset/versioned"
@@ -77,82 +78,10 @@ func ConfigValidation(ar *v1.AdmissionReview) *v1.AdmissionResponse {
 	klog.Info("AdmissionReview for Kind=%v, Namespace=%v Name=%v (%v) UID=%v validateOperation=%v UserInfo=%v",
 		req.Kind, req.Namespace, req.Name, pod.Name, req.UID, req.Operation, req.UserInfo)
 
-	for _, volume := range pod.Spec.Volumes {
-		if volume.ConfigMap != nil {
-			//reading configmapVersion from configmap
-			//get clusterConf
-			var cfg *rest.Config
-			var err error
-			cfg, err = rest.InClusterConfig()
-			//create clientset
-			clientSet, err := kubernetes.NewForConfig(cfg)
-			if err != nil {
-				klog.Error("Error building kubernetes clientset: %s", err.Error(), time.Now().UTC())
-			}
-
-			configMap, err := clientSet.CoreV1().ConfigMaps(pod.Namespace).Get(context.TODO(), volume.ConfigMap.Name, metav1.GetOptions{})
-			if err != nil {
-				return &v1.AdmissionResponse{
-					Result: &metav1.Status{
-						Message: err.Error(),
-					},
-				}
-			}
-			if pod.Annotations["ccm-"+volume.ConfigMap.Name] == configMap.Annotations["currentCustomConfigMapVersion"] {
-				klog.Info("customConfigMap version is equal to pod configVersion")
-			} else {
-				//copy configMap
-				configMap.Annotations["currentCustomConfigMapVersion"] = pod.Annotations["ccm-"+volume.ConfigMap.Name]
-				err := CopyCCMToCM(configMap)
-				if err != nil {
-					return &v1.AdmissionResponse{
-						Result: &metav1.Status{
-							Message: err.Error(),
-						},
-					}
-				}
-			}
-
-		} else if volume.Secret != nil {
-			//get clusterConf
-			var cfg *rest.Config
-			var err error
-			cfg, err = rest.InClusterConfig()
-			//create clientset
-			clientSet, err := kubernetes.NewForConfig(cfg)
-			if err != nil {
-				klog.Error("Error building kubernetes clientset: %s", err.Error(), time.Now().UTC())
-			}
-
-			secret, err := clientSet.CoreV1().Secrets(pod.Namespace).Get(context.TODO(), volume.Secret.SecretName, metav1.GetOptions{})
-			if err != nil {
-				return &v1.AdmissionResponse{
-					Result: &metav1.Status{
-						Message: err.Error(),
-					},
-				}
-			}
-			if pod.Annotations["cs-"+volume.Secret.SecretName] == secret.Annotations["currentCustomSecretVersion"] {
-				klog.Info("customSecret version is equal to pod SecretVersion")
-			} else {
-				//copy CS to secret
-				secret.Annotations["currentCustomSecretVersion"] = pod.Annotations["cs-"+volume.Secret.SecretName]
-				err := CopyCSToSecret(secret)
-				if err != nil {
-					return &v1.AdmissionResponse{
-						Result: &metav1.Status{
-							Message: err.Error(),
-						},
-					}
-				}
-			}
-		}
-	}
-
-	//check the envfrom
-	for _, container := range pod.Spec.Containers {
-		for _, env := range container.EnvFrom {
-			if env.ConfigMapRef != nil {
+	// it only allow the deployment/statefulset created pod to validate the version match
+	if len(pod.Annotations) != 0 && pod.Annotations["config-sync-controller"] == "configurator" {
+		for _, volume := range pod.Spec.Volumes {
+			if volume.ConfigMap != nil {
 				//reading configmapVersion from configmap
 				//get clusterConf
 				var cfg *rest.Config
@@ -164,21 +93,9 @@ func ConfigValidation(ar *v1.AdmissionReview) *v1.AdmissionResponse {
 					klog.Error("Error building kubernetes clientset: %s", err.Error(), time.Now().UTC())
 				}
 
-				configMap, err := clientSet.CoreV1().ConfigMaps(pod.Namespace).Get(context.TODO(), env.ConfigMapRef.Name, metav1.GetOptions{})
+				configMap, err := clientSet.CoreV1().ConfigMaps(pod.Namespace).Get(context.TODO(), volume.ConfigMap.Name, metav1.GetOptions{})
 				if err != nil {
-					return &v1.AdmissionResponse{
-						Result: &metav1.Status{
-							Message: err.Error(),
-						},
-					}
-				}
-				if pod.Annotations["ccm-"+env.ConfigMapRef.Name] == configMap.Annotations["currentCustomConfigMapVersion"] {
-					klog.Info("customConfigMap version is equal to pod configVersion")
-				} else {
-					//copy configMap
-					configMap.Annotations["currentCustomConfigMapVersion"] = pod.Annotations["ccm-"+env.ConfigMapRef.Name]
-					err := CopyCCMToCM(configMap)
-					if err != nil {
+					if !strings.Contains(pod.Name, "configurator-controllerwebhook") {
 						return &v1.AdmissionResponse{
 							Result: &metav1.Status{
 								Message: err.Error(),
@@ -186,7 +103,24 @@ func ConfigValidation(ar *v1.AdmissionReview) *v1.AdmissionResponse {
 						}
 					}
 				}
-			} else if env.SecretRef != nil {
+				if pod.Annotations["ccm-"+volume.ConfigMap.Name] == configMap.Annotations["currentCustomConfigMapVersion"] {
+					klog.Info("customConfigMap version is equal to pod configVersion")
+				} else {
+					//copy configMap
+					configMap.Annotations["currentCustomConfigMapVersion"] = pod.Annotations["ccm-"+volume.ConfigMap.Name]
+					err := CopyCCMToCM(configMap)
+					if err != nil {
+						if !strings.Contains(pod.Name, "configurator-controllerwebhook") {
+							return &v1.AdmissionResponse{
+								Result: &metav1.Status{
+									Message: err.Error(),
+								},
+							}
+						}
+					}
+				}
+
+			} else if volume.Secret != nil {
 				//get clusterConf
 				var cfg *rest.Config
 				var err error
@@ -197,25 +131,111 @@ func ConfigValidation(ar *v1.AdmissionReview) *v1.AdmissionResponse {
 					klog.Error("Error building kubernetes clientset: %s", err.Error(), time.Now().UTC())
 				}
 
-				secret, err := clientSet.CoreV1().Secrets(pod.Namespace).Get(context.TODO(), env.SecretRef.Name, metav1.GetOptions{})
+				secret, err := clientSet.CoreV1().Secrets(pod.Namespace).Get(context.TODO(), volume.Secret.SecretName, metav1.GetOptions{})
 				if err != nil {
-					return &v1.AdmissionResponse{
-						Result: &metav1.Status{
-							Message: err.Error(),
-						},
-					}
-				}
-				if pod.Annotations["cs-"+env.SecretRef.Name] == secret.Annotations["currentCustomSecretVersion"] {
-					klog.Info("customSecret version is equal to pod SecretVersion")
-				} else {
-					//copy CS to secret
-					secret.Annotations["currentCustomSecretVersion"] = pod.Annotations["cs-"+env.SecretRef.Name]
-					err := CopyCSToSecret(secret)
-					if err != nil {
+					if !strings.Contains(pod.Name, "configurator-controllerwebhook") {
 						return &v1.AdmissionResponse{
 							Result: &metav1.Status{
 								Message: err.Error(),
 							},
+						}
+					}
+				}
+				if pod.Annotations["cs-"+volume.Secret.SecretName] == secret.Annotations["currentCustomSecretVersion"] {
+					klog.Info("customSecret version is equal to pod SecretVersion")
+				} else {
+					//copy CS to secret
+					secret.Annotations["currentCustomSecretVersion"] = pod.Annotations["cs-"+volume.Secret.SecretName]
+					err := CopyCSToSecret(secret)
+					if err != nil {
+						if !strings.Contains(pod.Name, "configurator-controllerwebhook") {
+							return &v1.AdmissionResponse{
+								Result: &metav1.Status{
+									Message: err.Error(),
+								},
+							}
+						}
+					}
+				}
+			}
+		}
+
+		//check the envfrom
+		for _, container := range pod.Spec.Containers {
+			for _, env := range container.EnvFrom {
+				if env.ConfigMapRef != nil {
+					//reading configmapVersion from configmap
+					//get clusterConf
+					var cfg *rest.Config
+					var err error
+					cfg, err = rest.InClusterConfig()
+					//create clientset
+					clientSet, err := kubernetes.NewForConfig(cfg)
+					if err != nil {
+						klog.Error("Error building kubernetes clientset: %s", err.Error(), time.Now().UTC())
+					}
+
+					configMap, err := clientSet.CoreV1().ConfigMaps(pod.Namespace).Get(context.TODO(), env.ConfigMapRef.Name, metav1.GetOptions{})
+					if err != nil {
+						if !strings.Contains(pod.Name, "configurator-controllerwebhook") {
+							return &v1.AdmissionResponse{
+								Result: &metav1.Status{
+									Message: err.Error(),
+								},
+							}
+						}
+					}
+					if pod.Annotations["ccm-"+env.ConfigMapRef.Name] == configMap.Annotations["currentCustomConfigMapVersion"] {
+						klog.Info("customConfigMap version is equal to pod configVersion")
+					} else {
+						//copy configMap
+						configMap.Annotations["currentCustomConfigMapVersion"] = pod.Annotations["ccm-"+env.ConfigMapRef.Name]
+						err := CopyCCMToCM(configMap)
+						if err != nil {
+							if !strings.Contains(pod.Name, "configurator-controllerwebhook") {
+								return &v1.AdmissionResponse{
+									Result: &metav1.Status{
+										Message: err.Error(),
+									},
+								}
+							}
+						}
+					}
+				} else if env.SecretRef != nil {
+					//get clusterConf
+					var cfg *rest.Config
+					var err error
+					cfg, err = rest.InClusterConfig()
+					//create clientset
+					clientSet, err := kubernetes.NewForConfig(cfg)
+					if err != nil {
+						klog.Error("Error building kubernetes clientset: %s", err.Error(), time.Now().UTC())
+					}
+
+					secret, err := clientSet.CoreV1().Secrets(pod.Namespace).Get(context.TODO(), env.SecretRef.Name, metav1.GetOptions{})
+					if err != nil {
+						if !strings.Contains(pod.Name, "configurator-controllerwebhook") {
+							return &v1.AdmissionResponse{
+								Result: &metav1.Status{
+									Message: err.Error(),
+								},
+							}
+						}
+					}
+					if pod.Annotations["cs-"+env.SecretRef.Name] == secret.Annotations["currentCustomSecretVersion"] {
+						klog.Info("customSecret version is equal to pod SecretVersion")
+					} else {
+						//copy CS to secret
+						secret.Annotations["currentCustomSecretVersion"] = pod.Annotations["cs-"+env.SecretRef.Name]
+						err := CopyCSToSecret(secret)
+						if err != nil {
+							if !strings.Contains(pod.Name, "configurator-controllerwebhook") {
+								return &v1.AdmissionResponse{
+									Result: &metav1.Status{
+										Message: err.Error(),
+									},
+								}
+							}
 						}
 					}
 				}

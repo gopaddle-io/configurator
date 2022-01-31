@@ -377,6 +377,9 @@ func createStatefulsetPatch(statefulset *appsV1.StatefulSet) ([]byte, error) {
 			}
 		}
 	}
+	//it to handle statefulset in pod validation
+	addnewAnnotation["config-sync-controller"] = "configurator"
+
 	patch = append(patch, updateAnnotation(statefulsetAnnotation, addnewAnnotation, removeAnnotation)...)
 	return json.Marshal(patch)
 }
