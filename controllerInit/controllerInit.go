@@ -2,12 +2,13 @@ package main
 
 import (
 	"context"
+	b64 "encoding/base64"
 	"encoding/json"
 	"fmt"
 	"math/rand"
 	"regexp"
+	"strings"
 	"time"
-	b64 "encoding/base64"
 
 	customConfigMapv1alpha1 "github.com/gopaddle-io/configurator/apis/configurator.gopaddle.io/v1alpha1"
 	customSecretv1alpha1 "github.com/gopaddle-io/configurator/apis/configurator.gopaddle.io/v1alpha1"
@@ -82,11 +83,28 @@ func initController() error {
 									confannotations["currentCustomConfigMapVersion"] = version
 									confannotations["customConfigMap-name"] = ccm.Name
 									confannotations["updateMethod"] = "ignoreWhenShared"
+									confannotations["deployments"] = deploy.Name
 									configmap.Annotations = confannotations
 								} else {
 									configmap.Annotations["currentCustomConfigMapVersion"] = version
 									configmap.Annotations["customConfigMap-name"] = ccm.Name
 									configmap.Annotations["updateMethod"] = "ignoreWhenShared"
+									if configmap.Annotations["deployments"] != "" {
+										// check that deployment name already exist in configMapName
+										annotation := configmap.Annotations["deployments"]
+										split := strings.Split(annotation, ",")
+										check := false
+										for _, s := range split {
+											if s == deploy.Name {
+												check = true
+											}
+										}
+										if !check {
+											configmap.Annotations["deployments"] = configmap.Annotations["deployments"] + "," + deploy.Name
+										}
+									} else {
+										configmap.Annotations["deployments"] = deploy.Name
+									}
 								}
 
 								_, errs := clientSet.CoreV1().ConfigMaps(ns.Name).Update(context.TODO(), configmap, metav1.UpdateOptions{})
@@ -122,11 +140,28 @@ func initController() error {
 									secretannotations["currentCustomSecretVersion"] = version
 									secretannotations["customSecret-name"] = cs.Name
 									secretannotations["updateMethod"] = "ignoreWhenShared"
+									secretannotations["deployments"] = deploy.Name
 									secret.Annotations = secretannotations
 								} else {
 									secret.Annotations["currentCustomSecretVersion"] = version
 									secret.Annotations["customSecret-name"] = cs.Name
 									secret.Annotations["updateMethod"] = "ignoreWhenShared"
+									if secret.Annotations["deployments"] != "" {
+										// check that deployment name already exist in secret
+										annotation := secret.Annotations["deployments"]
+										split := strings.Split(annotation, ",")
+										check := false
+										for _, s := range split {
+											if s == deploy.Name {
+												check = true
+											}
+										}
+										if !check {
+											secret.Annotations["deployments"] = secret.Annotations["deployments"] + "," + deploy.Name
+										}
+									} else {
+										secret.Annotations["deployments"] = deploy.Name
+									}
 								}
 								_, errs := clientSet.CoreV1().Secrets(ns.Name).Update(context.TODO(), secret, metav1.UpdateOptions{})
 								if errs != nil {
@@ -138,6 +173,253 @@ func initController() error {
 						}
 					}
 				}
+
+				//envfrom config and secret container resource in deployment
+				for _, container := range deploy.Spec.Template.Spec.Containers {
+					for _, env := range container.EnvFrom {
+						if env.ConfigMapRef != nil {
+							if deploy.Spec.Template.Annotations["ccm-"+env.ConfigMapRef.Name] == "" || len(deploy.Spec.Template.Annotations) == 0 {
+
+								//get configMap
+								configmap, e := clientSet.CoreV1().ConfigMaps(ns.Name).Get(context.TODO(), env.ConfigMapRef.Name, metav1.GetOptions{})
+								if e != nil {
+									klog.Errorf("Failed on getting configmap: %v", e.Error())
+									return e
+								}
+
+								if configmap.Annotations["currentCustomConfigMapVersion"] == "" || len(configmap.Annotations) == 0 {
+									//create new ccm
+									configuratorClientSet, err := client.NewForConfig(cfg)
+									if err != nil {
+										klog.Error("Error building example clientset: %s", err.Error())
+										return err
+									}
+									ccm, version := newCustomConfigMap(configmap)
+									_, er := configuratorClientSet.ConfiguratorV1alpha1().CustomConfigMaps(ns.Name).Create(context.TODO(), ccm, metav1.CreateOptions{})
+									if er != nil {
+										return er
+									}
+									//update ccmVersion in configMap
+									if len(configmap.Annotations) == 0 {
+										confannotations := make(map[string]string)
+										confannotations["currentCustomConfigMapVersion"] = version
+										confannotations["customConfigMap-name"] = ccm.Name
+										confannotations["updateMethod"] = "ignoreWhenShared"
+										confannotations["deployments"] = deploy.Name
+										configmap.Annotations = confannotations
+									} else {
+										configmap.Annotations["currentCustomConfigMapVersion"] = version
+										configmap.Annotations["customConfigMap-name"] = ccm.Name
+										configmap.Annotations["updateMethod"] = "ignoreWhenShared"
+										if configmap.Annotations["deployments"] != "" {
+											// check that deployment name already exist in configMapName
+											annotation := configmap.Annotations["deployments"]
+											split := strings.Split(annotation, ",")
+											check := false
+											for _, s := range split {
+												if s == deploy.Name {
+													check = true
+												}
+											}
+											if !check {
+												configmap.Annotations["deployments"] = configmap.Annotations["deployments"] + "," + deploy.Name
+											}
+										} else {
+											configmap.Annotations["deployments"] = deploy.Name
+										}
+									}
+
+									_, errs := clientSet.CoreV1().ConfigMaps(ns.Name).Update(context.TODO(), configmap, metav1.UpdateOptions{})
+									if errs != nil {
+										klog.Error("configmap update failed", errs.Error())
+										return errs
+									}
+									annotations["ccm-"+env.ConfigMapRef.Name] = version
+								}
+							}
+						} else if env.SecretRef != nil {
+							if deploy.Spec.Template.Annotations["cs-"+env.SecretRef.Name] == "" || len(deploy.Spec.Template.Annotations) == 0 {
+								//get secret
+								secret, e := clientSet.CoreV1().Secrets(ns.Name).Get(context.TODO(), env.SecretRef.Name, metav1.GetOptions{})
+								if e != nil {
+									klog.Errorf("Failed on getting configmap: %v", e.Error())
+									return e
+								}
+								if secret.Annotations["currentCustomSecretVersion"] == "" || len(secret.Annotations) == 0 {
+									configuratorClientSet, err := client.NewForConfig(cfg)
+									if err != nil {
+										klog.Error("Error building example clientset: %s", err.Error())
+										return err
+									}
+									cs, version := newCustomSecret(secret)
+									cs, er := configuratorClientSet.ConfiguratorV1alpha1().CustomSecrets(ns.Name).Create(context.TODO(), cs, metav1.CreateOptions{})
+									if er != nil {
+										klog.Error("Error creating customConfigmap: %v", er.Error())
+										return er
+									}
+									if len(secret.Annotations) == 0 {
+										secretannotations := make(map[string]string)
+										secretannotations["currentCustomSecretVersion"] = version
+										secretannotations["customSecret-name"] = cs.Name
+										secretannotations["updateMethod"] = "ignoreWhenShared"
+										secretannotations["deployments"] = deploy.Name
+										secret.Annotations = secretannotations
+									} else {
+										secret.Annotations["currentCustomSecretVersion"] = version
+										secret.Annotations["customSecret-name"] = cs.Name
+										secret.Annotations["updateMethod"] = "ignoreWhenShared"
+										if secret.Annotations["deployments"] != "" {
+											// check that deployment name already exist in secret
+											annotation := secret.Annotations["deployments"]
+											split := strings.Split(annotation, ",")
+											check := false
+											for _, s := range split {
+												if s == deploy.Name {
+													check = true
+												}
+											}
+											if !check {
+												secret.Annotations["deployments"] = secret.Annotations["deployments"] + "," + deploy.Name
+											}
+										} else {
+											secret.Annotations["deployments"] = deploy.Name
+										}
+									}
+									_, errs := clientSet.CoreV1().Secrets(ns.Name).Update(context.TODO(), secret, metav1.UpdateOptions{})
+									if errs != nil {
+										klog.Error("secret update failed", errs.Error())
+										return errs
+									}
+									annotations["cs-"+env.SecretRef.Name] = version
+								}
+							}
+						}
+					}
+				}
+
+				//envfrom config and secret initContainer resource in deployment
+				for _, initContainer := range deploy.Spec.Template.Spec.InitContainers {
+					for _, env := range initContainer.EnvFrom {
+						if env.ConfigMapRef != nil {
+							if deploy.Spec.Template.Annotations["ccm-"+env.ConfigMapRef.Name] == "" || len(deploy.Spec.Template.Annotations) == 0 {
+
+								//get configMap
+								configmap, e := clientSet.CoreV1().ConfigMaps(ns.Name).Get(context.TODO(), env.ConfigMapRef.Name, metav1.GetOptions{})
+								if e != nil {
+									klog.Errorf("Failed on getting configmap: %v", e.Error())
+									return e
+								}
+
+								if configmap.Annotations["currentCustomConfigMapVersion"] == "" || len(configmap.Annotations) == 0 {
+									//create new ccm
+									configuratorClientSet, err := client.NewForConfig(cfg)
+									if err != nil {
+										klog.Error("Error building example clientset: %s", err.Error())
+										return err
+									}
+									ccm, version := newCustomConfigMap(configmap)
+									_, er := configuratorClientSet.ConfiguratorV1alpha1().CustomConfigMaps(ns.Name).Create(context.TODO(), ccm, metav1.CreateOptions{})
+									if er != nil {
+										return er
+									}
+									//update ccmVersion in configMap
+									if len(configmap.Annotations) == 0 {
+										confannotations := make(map[string]string)
+										confannotations["currentCustomConfigMapVersion"] = version
+										confannotations["customConfigMap-name"] = ccm.Name
+										confannotations["updateMethod"] = "ignoreWhenShared"
+										confannotations["deployments"] = deploy.Name
+										configmap.Annotations = confannotations
+									} else {
+										configmap.Annotations["currentCustomConfigMapVersion"] = version
+										configmap.Annotations["customConfigMap-name"] = ccm.Name
+										configmap.Annotations["updateMethod"] = "ignoreWhenShared"
+										if configmap.Annotations["deployments"] != "" {
+											// check that deployment name already exist in configMapName
+											annotation := configmap.Annotations["deployments"]
+											split := strings.Split(annotation, ",")
+											check := false
+											for _, s := range split {
+												if s == deploy.Name {
+													check = true
+												}
+											}
+											if !check {
+												configmap.Annotations["deployments"] = configmap.Annotations["deployments"] + "," + deploy.Name
+											}
+										} else {
+											configmap.Annotations["deployments"] = deploy.Name
+										}
+									}
+
+									_, errs := clientSet.CoreV1().ConfigMaps(ns.Name).Update(context.TODO(), configmap, metav1.UpdateOptions{})
+									if errs != nil {
+										klog.Error("configmap update failed", errs.Error())
+										return errs
+									}
+									annotations["ccm-"+env.ConfigMapRef.Name] = version
+								}
+							}
+						} else if env.SecretRef != nil {
+							if deploy.Spec.Template.Annotations["cs-"+env.SecretRef.Name] == "" || len(deploy.Spec.Template.Annotations) == 0 {
+								//get secret
+								secret, e := clientSet.CoreV1().Secrets(ns.Name).Get(context.TODO(), env.SecretRef.Name, metav1.GetOptions{})
+								if e != nil {
+									klog.Errorf("Failed on getting configmap: %v", e.Error())
+									return e
+								}
+								if secret.Annotations["currentCustomSecretVersion"] == "" || len(secret.Annotations) == 0 {
+									configuratorClientSet, err := client.NewForConfig(cfg)
+									if err != nil {
+										klog.Error("Error building example clientset: %s", err.Error())
+										return err
+									}
+									cs, version := newCustomSecret(secret)
+									cs, er := configuratorClientSet.ConfiguratorV1alpha1().CustomSecrets(ns.Name).Create(context.TODO(), cs, metav1.CreateOptions{})
+									if er != nil {
+										klog.Error("Error creating customConfigmap: %v", er.Error())
+										return er
+									}
+									if len(secret.Annotations) == 0 {
+										secretannotations := make(map[string]string)
+										secretannotations["currentCustomSecretVersion"] = version
+										secretannotations["customSecret-name"] = cs.Name
+										secretannotations["updateMethod"] = "ignoreWhenShared"
+										secretannotations["deployments"] = deploy.Name
+										secret.Annotations = secretannotations
+									} else {
+										secret.Annotations["currentCustomSecretVersion"] = version
+										secret.Annotations["customSecret-name"] = cs.Name
+										secret.Annotations["updateMethod"] = "ignoreWhenShared"
+										if secret.Annotations["deployments"] != "" {
+											// check that deployment name already exist in secret
+											annotation := secret.Annotations["deployments"]
+											split := strings.Split(annotation, ",")
+											check := false
+											for _, s := range split {
+												if s == deploy.Name {
+													check = true
+												}
+											}
+											if !check {
+												secret.Annotations["deployments"] = secret.Annotations["deployments"] + "," + deploy.Name
+											}
+										} else {
+											secret.Annotations["deployments"] = deploy.Name
+										}
+									}
+									_, errs := clientSet.CoreV1().Secrets(ns.Name).Update(context.TODO(), secret, metav1.UpdateOptions{})
+									if errs != nil {
+										klog.Error("secret update failed", errs.Error())
+										return errs
+									}
+									annotations["cs-"+env.SecretRef.Name] = version
+								}
+							}
+						}
+					}
+				}
+
 				if len(deploy.Spec.Template.Annotations) == 0 {
 					deploy.Spec.Template.Annotations = annotations
 				} else {
@@ -194,9 +476,34 @@ func initController() error {
 									return er
 								}
 								//update ccmVersion in configMap
-								configmap.Annotations["currentCustomConfigMapVersion"] = version
-								configmap.Annotations["customConfigMap-name"] = ccm.Name
-								configmap.Annotations["updateMethod"] = "ignoreWhenShared"
+								if len(configmap.Annotations) == 0 {
+									confannotations := make(map[string]string)
+									confannotations["currentCustomConfigMapVersion"] = version
+									confannotations["customConfigMap-name"] = ccm.Name
+									confannotations["updateMethod"] = "ignoreWhenShared"
+									confannotations["statefulsets"] = sts.Name
+									configmap.Annotations = confannotations
+								} else {
+									configmap.Annotations["currentCustomConfigMapVersion"] = version
+									configmap.Annotations["customConfigMap-name"] = ccm.Name
+									configmap.Annotations["updateMethod"] = "ignoreWhenShared"
+									if configmap.Annotations["statefulsets"] != "" {
+										// check that deployment name already exist in configMapName
+										annotation := configmap.Annotations["statefulsets"]
+										split := strings.Split(annotation, ",")
+										check := false
+										for _, s := range split {
+											if s == sts.Name {
+												check = true
+											}
+										}
+										if !check {
+											configmap.Annotations["statefulsets"] = configmap.Annotations["statefulsets"] + "," + sts.Name
+										}
+									} else {
+										configmap.Annotations["statefulsets"] = sts.Name
+									}
+								}
 								_, errs := clientSet.CoreV1().ConfigMaps(ns.Name).Update(context.TODO(), configmap, metav1.UpdateOptions{})
 								if errs != nil {
 									klog.Error("configmap update failed", errs.Error())
@@ -226,15 +533,286 @@ func initController() error {
 									return er
 								}
 
-								secret.Annotations["currentCustomSecretVersion"] = version
-								secret.Annotations["customSecret-name"] = cs.Name
-								secret.Annotations["updateMethod"] = "ignoreWhenShared"
+								if len(secret.Annotations) == 0 {
+									secretannotations := make(map[string]string)
+									secretannotations["currentCustomSecretVersion"] = version
+									secretannotations["customSecret-name"] = cs.Name
+									secretannotations["updateMethod"] = "ignoreWhenShared"
+									secretannotations["statefulsets"] = sts.Name
+									secret.Annotations = secretannotations
+								} else {
+									secret.Annotations["currentCustomSecretVersion"] = version
+									secret.Annotations["customSecret-name"] = cs.Name
+									secret.Annotations["updateMethod"] = "ignoreWhenShared"
+									if secret.Annotations["statefulsets"] != "" {
+										// check that deployment name already exist in secret
+										annotation := secret.Annotations["statefulsets"]
+										split := strings.Split(annotation, ",")
+										check := false
+										for _, s := range split {
+											if s == sts.Name {
+												check = true
+											}
+										}
+										if !check {
+											secret.Annotations["statefulsets"] = secret.Annotations["statefulsets"] + "," + sts.Name
+										}
+									} else {
+										secret.Annotations["statefulsets"] = sts.Name
+									}
+								}
 								_, errs := clientSet.CoreV1().Secrets(ns.Name).Update(context.TODO(), secret, metav1.UpdateOptions{})
 								if errs != nil {
 									klog.Error("secret update failed", errs.Error())
 									return errs
 								}
 								stsAnnotation["cs-"+volume.Secret.SecretName] = version
+							}
+						}
+					}
+				}
+
+				//envfrom config and secret container resource in statefulset
+				for _, container := range sts.Spec.Template.Spec.Containers {
+					for _, env := range container.EnvFrom {
+						if env.ConfigMapRef != nil {
+							if sts.Spec.Template.Annotations["ccm-"+env.ConfigMapRef.Name] == "" || len(sts.Spec.Template.Annotations) == 0 {
+
+								//get configMap
+								configmap, e := clientSet.CoreV1().ConfigMaps(ns.Name).Get(context.TODO(), env.ConfigMapRef.Name, metav1.GetOptions{})
+								if e != nil {
+									klog.Errorf("Failed on getting configmap: %v", e.Error())
+									return e
+								}
+
+								if configmap.Annotations["currentCustomConfigMapVersion"] == "" || len(configmap.Annotations) == 0 {
+									//create new ccm
+									configuratorClientSet, err := client.NewForConfig(cfg)
+									if err != nil {
+										klog.Error("Error building example clientset: %s", err.Error())
+										return err
+									}
+									ccm, version := newCustomConfigMap(configmap)
+									_, er := configuratorClientSet.ConfiguratorV1alpha1().CustomConfigMaps(ns.Name).Create(context.TODO(), ccm, metav1.CreateOptions{})
+									if er != nil {
+										return er
+									}
+									//update ccmVersion in configMap
+									if len(configmap.Annotations) == 0 {
+										confannotations := make(map[string]string)
+										confannotations["currentCustomConfigMapVersion"] = version
+										confannotations["customConfigMap-name"] = ccm.Name
+										confannotations["updateMethod"] = "ignoreWhenShared"
+										confannotations["statefulsets"] = sts.Name
+										configmap.Annotations = confannotations
+									} else {
+										configmap.Annotations["currentCustomConfigMapVersion"] = version
+										configmap.Annotations["customConfigMap-name"] = ccm.Name
+										configmap.Annotations["updateMethod"] = "ignoreWhenShared"
+										if configmap.Annotations["statefulsets"] != "" {
+											// check that deployment name already exist in configMapName
+											annotation := configmap.Annotations["statefulsets"]
+											split := strings.Split(annotation, ",")
+											check := false
+											for _, s := range split {
+												if s == sts.Name {
+													check = true
+												}
+											}
+											if !check {
+												configmap.Annotations["statefulsets"] = configmap.Annotations["statefulsets"] + "," + sts.Name
+											}
+										} else {
+											configmap.Annotations["statefulsets"] = sts.Name
+										}
+									}
+
+									_, errs := clientSet.CoreV1().ConfigMaps(ns.Name).Update(context.TODO(), configmap, metav1.UpdateOptions{})
+									if errs != nil {
+										klog.Error("configmap update failed", errs.Error())
+										return errs
+									}
+									stsAnnotation["ccm-"+env.ConfigMapRef.Name] = version
+								}
+							}
+						} else if env.SecretRef != nil {
+							if sts.Spec.Template.Annotations["cs-"+env.SecretRef.Name] == "" || len(sts.Spec.Template.Annotations) == 0 {
+								//get secret
+								secret, e := clientSet.CoreV1().Secrets(ns.Name).Get(context.TODO(), env.SecretRef.Name, metav1.GetOptions{})
+								if e != nil {
+									klog.Errorf("Failed on getting configmap: %v", e.Error())
+									return e
+								}
+								if secret.Annotations["currentCustomSecretVersion"] == "" || len(secret.Annotations) == 0 {
+									configuratorClientSet, err := client.NewForConfig(cfg)
+									if err != nil {
+										klog.Error("Error building example clientset: %s", err.Error())
+										return err
+									}
+									cs, version := newCustomSecret(secret)
+									cs, er := configuratorClientSet.ConfiguratorV1alpha1().CustomSecrets(ns.Name).Create(context.TODO(), cs, metav1.CreateOptions{})
+									if er != nil {
+										klog.Error("Error creating customConfigmap: %v", er.Error())
+										return er
+									}
+									if len(secret.Annotations) == 0 {
+										secretannotations := make(map[string]string)
+										secretannotations["currentCustomSecretVersion"] = version
+										secretannotations["customSecret-name"] = cs.Name
+										secretannotations["updateMethod"] = "ignoreWhenShared"
+										secretannotations["statefulsets"] = sts.Name
+										secret.Annotations = secretannotations
+									} else {
+										secret.Annotations["currentCustomSecretVersion"] = version
+										secret.Annotations["customSecret-name"] = cs.Name
+										secret.Annotations["updateMethod"] = "ignoreWhenShared"
+										if secret.Annotations["statefulsets"] != "" {
+											// check that deployment name already exist in secret
+											annotation := secret.Annotations["statefulsets"]
+											split := strings.Split(annotation, ",")
+											check := false
+											for _, s := range split {
+												if s == sts.Name {
+													check = true
+												}
+											}
+											if !check {
+												secret.Annotations["statefulsets"] = secret.Annotations["statefulsets"] + "," + sts.Name
+											}
+										} else {
+											secret.Annotations["statefulsets"] = sts.Name
+										}
+									}
+									_, errs := clientSet.CoreV1().Secrets(ns.Name).Update(context.TODO(), secret, metav1.UpdateOptions{})
+									if errs != nil {
+										klog.Error("secret update failed", errs.Error())
+										return errs
+									}
+									stsAnnotation["cs-"+env.SecretRef.Name] = version
+								}
+							}
+						}
+					}
+				}
+
+				//envfrom config and secret initContainer resource in statefulset
+				for _, initContainer := range sts.Spec.Template.Spec.InitContainers {
+					for _, env := range initContainer.EnvFrom {
+						if env.ConfigMapRef != nil {
+							if sts.Spec.Template.Annotations["ccm-"+env.ConfigMapRef.Name] == "" || len(sts.Spec.Template.Annotations) == 0 {
+
+								//get configMap
+								configmap, e := clientSet.CoreV1().ConfigMaps(ns.Name).Get(context.TODO(), env.ConfigMapRef.Name, metav1.GetOptions{})
+								if e != nil {
+									klog.Errorf("Failed on getting configmap: %v", e.Error())
+									return e
+								}
+
+								if configmap.Annotations["currentCustomConfigMapVersion"] == "" || len(configmap.Annotations) == 0 {
+									//create new ccm
+									configuratorClientSet, err := client.NewForConfig(cfg)
+									if err != nil {
+										klog.Error("Error building example clientset: %s", err.Error())
+										return err
+									}
+									ccm, version := newCustomConfigMap(configmap)
+									_, er := configuratorClientSet.ConfiguratorV1alpha1().CustomConfigMaps(ns.Name).Create(context.TODO(), ccm, metav1.CreateOptions{})
+									if er != nil {
+										return er
+									}
+									//update ccmVersion in configMap
+									if len(configmap.Annotations) == 0 {
+										confannotations := make(map[string]string)
+										confannotations["currentCustomConfigMapVersion"] = version
+										confannotations["customConfigMap-name"] = ccm.Name
+										confannotations["updateMethod"] = "ignoreWhenShared"
+										confannotations["statefulsets"] = sts.Name
+										configmap.Annotations = confannotations
+									} else {
+										configmap.Annotations["currentCustomConfigMapVersion"] = version
+										configmap.Annotations["customConfigMap-name"] = ccm.Name
+										configmap.Annotations["updateMethod"] = "ignoreWhenShared"
+										if configmap.Annotations["statefulsets"] != "" {
+											// check that deployment name already exist in configMapName
+											annotation := configmap.Annotations["statefulsets"]
+											split := strings.Split(annotation, ",")
+											check := false
+											for _, s := range split {
+												if s == sts.Name {
+													check = true
+												}
+											}
+											if !check {
+												configmap.Annotations["statefulsets"] = configmap.Annotations["statefulsets"] + "," + sts.Name
+											}
+										} else {
+											configmap.Annotations["statefulsets"] = sts.Name
+										}
+									}
+
+									_, errs := clientSet.CoreV1().ConfigMaps(ns.Name).Update(context.TODO(), configmap, metav1.UpdateOptions{})
+									if errs != nil {
+										klog.Error("configmap update failed", errs.Error())
+										return errs
+									}
+									stsAnnotation["ccm-"+env.ConfigMapRef.Name] = version
+								}
+							}
+						} else if env.SecretRef != nil {
+							if sts.Spec.Template.Annotations["cs-"+env.SecretRef.Name] == "" || len(sts.Spec.Template.Annotations) == 0 {
+								//get secret
+								secret, e := clientSet.CoreV1().Secrets(ns.Name).Get(context.TODO(), env.SecretRef.Name, metav1.GetOptions{})
+								if e != nil {
+									klog.Errorf("Failed on getting configmap: %v", e.Error())
+									return e
+								}
+								if secret.Annotations["currentCustomSecretVersion"] == "" || len(secret.Annotations) == 0 {
+									configuratorClientSet, err := client.NewForConfig(cfg)
+									if err != nil {
+										klog.Error("Error building example clientset: %s", err.Error())
+										return err
+									}
+									cs, version := newCustomSecret(secret)
+									cs, er := configuratorClientSet.ConfiguratorV1alpha1().CustomSecrets(ns.Name).Create(context.TODO(), cs, metav1.CreateOptions{})
+									if er != nil {
+										klog.Error("Error creating customConfigmap: %v", er.Error())
+										return er
+									}
+									if len(secret.Annotations) == 0 {
+										secretannotations := make(map[string]string)
+										secretannotations["currentCustomSecretVersion"] = version
+										secretannotations["customSecret-name"] = cs.Name
+										secretannotations["updateMethod"] = "ignoreWhenShared"
+										secretannotations["statefulsets"] = sts.Name
+										secret.Annotations = secretannotations
+									} else {
+										secret.Annotations["currentCustomSecretVersion"] = version
+										secret.Annotations["customSecret-name"] = cs.Name
+										secret.Annotations["updateMethod"] = "ignoreWhenShared"
+										if secret.Annotations["statefulsets"] != "" {
+											// check that deployment name already exist in secret
+											annotation := secret.Annotations["statefulsets"]
+											split := strings.Split(annotation, ",")
+											check := false
+											for _, s := range split {
+												if s == sts.Name {
+													check = true
+												}
+											}
+											if !check {
+												secret.Annotations["statefulsets"] = secret.Annotations["statefulsets"] + "," + sts.Name
+											}
+										} else {
+											secret.Annotations["statefulsets"] = sts.Name
+										}
+									}
+									_, errs := clientSet.CoreV1().Secrets(ns.Name).Update(context.TODO(), secret, metav1.UpdateOptions{})
+									if errs != nil {
+										klog.Error("secret update failed", errs.Error())
+										return errs
+									}
+									stsAnnotation["cs-"+env.SecretRef.Name] = version
+								}
 							}
 						}
 					}
