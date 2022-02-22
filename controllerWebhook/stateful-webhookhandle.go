@@ -299,6 +299,106 @@ func createStatefulsetPatch(statefulset *appsV1.StatefulSet) ([]byte, error) {
 			}
 		}
 	}
+
+	//add new annotation form envfrom inticontainer
+	for _, container := range statefulset.Spec.Template.Spec.InitContainers {
+		for _, env := range container.EnvFrom {
+			if env.ConfigMapRef != nil {
+				//check already configMapname exist or not
+				if statefulset.Spec.Template.Annotations["ccm-"+env.ConfigMapRef.Name] == "" || len(statefulset.Spec.Template.Annotations) == 0 {
+					//reading configmapVersion from configmap
+					//get clusterConf
+					var cfg *rest.Config
+					var err error
+					cfg, err = rest.InClusterConfig()
+					//create clientset
+					clientSet, err := kubernetes.NewForConfig(cfg)
+					if err != nil {
+						klog.Fatalf("Error building kubernetes clientset: %s", err.Error(), time.Now().UTC())
+					}
+					configMap, err := clientSet.CoreV1().ConfigMaps(statefulset.Namespace).Get(context.TODO(), env.ConfigMapRef.Name, metav1.GetOptions{})
+					if err != nil {
+						return nil, err
+					}
+					//adding annotation to configMap
+					if configMap.Annotations["statefulsets"] == "" {
+						if len(configMap.Annotations) == 0 {
+							annotation := make(map[string]string)
+							annotation["statefulsets"] = statefulset.Name
+							configMap.Annotations = annotation
+						} else {
+							configMap.Annotations["statefulsets"] = statefulset.Name
+						}
+					} else {
+						// check that deployment name already exist in configMapName
+						annotation := configMap.Annotations["statefulsets"]
+						split := strings.Split(annotation, ",")
+						check := false
+						for _, s := range split {
+							if s == statefulset.Name {
+								check = true
+							}
+						}
+						if !check {
+							configMap.Annotations["statefulsets"] = statefulset.Name
+						}
+					}
+					configMap, errs := clientSet.CoreV1().ConfigMaps(statefulset.Namespace).Update(context.TODO(), configMap, metav1.UpdateOptions{})
+					if errs != nil {
+						return nil, errs
+					}
+					addnewAnnotation["ccm-"+configMap.Name] = configMap.Annotations["currentCustomConfigMapVersion"]
+				}
+			} else if env.SecretRef != nil {
+				if statefulset.Spec.Template.Annotations["cs-"+env.SecretRef.Name] == "" || len(statefulset.Spec.Template.Annotations) == 0 {
+					//reading SecretVersion from Secret
+					//get clusterConf
+					var cfg *rest.Config
+					var err error
+					cfg, err = rest.InClusterConfig()
+					//create clientset
+					clientSet, err := kubernetes.NewForConfig(cfg)
+					if err != nil {
+						klog.Fatalf("Error building kubernetes clientset: %s", err.Error(), time.Now().UTC())
+					}
+					secret, err := clientSet.CoreV1().Secrets(statefulset.Namespace).Get(context.TODO(), env.SecretRef.Name, metav1.GetOptions{})
+					if err != nil {
+						return nil, err
+					}
+
+					//adding annotation to configMap
+					if secret.Annotations["statefulsets"] == "" {
+						if len(secret.Annotations) == 0 {
+							annotation := make(map[string]string)
+							annotation["statefulsets"] = statefulset.Name
+							secret.Annotations = annotation
+						} else {
+							secret.Annotations["statefulsets"] = statefulset.Name
+						}
+					} else {
+						// check that deployment name already exist in secretName
+						annotation := secret.Annotations["statefulsets"]
+						split := strings.Split(annotation, ",")
+						check := false
+						for _, s := range split {
+							if s == statefulset.Name {
+								check = true
+							}
+						}
+						if !check {
+							secret.Annotations["statefulsets"] = statefulset.Name
+						}
+					}
+					secret, errs := clientSet.CoreV1().Secrets(statefulset.Namespace).Update(context.TODO(), secret, metav1.UpdateOptions{})
+					if errs != nil {
+						return nil, errs
+					}
+					addnewAnnotation["cs-"+secret.Name] = secret.Annotations["currentCustomSecretVersion"]
+				}
+			}
+		}
+	}
+
 	//remove annotation in deployment if that configmap name is not there
 	statefulsetAnnotation := make(map[string]string)
 	removeAnnotation := make(map[string]string)
