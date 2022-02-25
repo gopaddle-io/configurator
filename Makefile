@@ -11,6 +11,8 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
+.PHONY: helm
+	
 # Setting SHELL to bash allows bash commands to be executed by recipes.
 # This is a requirement for 'setup-envtest.sh' in the test target.
 # Options are set to exit when a recipe line exits non-zero or a piped command fails.
@@ -106,3 +108,13 @@ GOBIN=$(PROJECT_DIR)/bin go get $(2) ;\
 rm -rf $$TMP_DIR ;\
 }
 endef
+
+helm:
+	cd helm && helm package ../helm-src/configurator
+	cd helm && helm repo index .
+
+helm-install:
+	-helm upgrade --install --create-namespace --namespace configurator configurator helm-src/configurator
+
+helm-uninstall:
+	-helm uninstall -n configurator configurator

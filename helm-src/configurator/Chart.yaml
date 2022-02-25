@@ -1,6 +1,6 @@
 apiVersion: v2
 appVersion: latest
-description: Helm chart for installing configurator CRDs & Custom Controller
+description: Helm chart for installing configurator CRDs, Admission Controller & Custom Controller 
 name: configurator
 type: application
-version: 0.3.0-alpha
+version: 0.4.0-alpha

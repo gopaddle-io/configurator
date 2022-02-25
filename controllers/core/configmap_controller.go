@@ -45,7 +45,7 @@ type ConfigMapReconciler struct {
 	EventRecorder record.EventRecorder
 }
 
-var log = ctrl.Log.WithName("SecretController")
+var log = ctrl.Log.WithName("ConfigMapController")
 
 //+kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=core,resources=configmaps/status,verbs=get;update;patch
@@ -63,7 +63,6 @@ var log = ctrl.Log.WithName("SecretController")
 func (r *ConfigMapReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	var configMaplogname string = req.Namespace + "/" + req.Name
 	var configMap corev1.ConfigMap
-
 	//get configMap
 	err := r.Get(ctx, req.NamespacedName, &configMap)
 	if err != nil {
@@ -80,32 +79,71 @@ func (r *ConfigMapReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// check the CCM_version in the configMap if the Version not exist.
 	// it create new version of CCM and add annotation to that configMap
 	if currentCCM_Version == "" {
-		ccm, version := newCustomConfigMap(&configMap)
-		er := r.Create(ctx, ccm)
-		if er != nil {
-			r.EventRecorder.Eventf(&configMap, corev1.EventTypeWarning, "FailedCreateCustomConfigMap", "Error creating CustomConfigMap: %v", er.Error())
-			return ctrl.Result{}, er
+		//check if current version avaliable for that configMap
+		var ccmList customConfigMapv1alpha1.CustomConfigMapList
+		err := r.List(ctx, &ccmList, client.MatchingLabels{"name": configMap.Name, "current": "true"}, client.InNamespace(configMap.Namespace))
+		if err != nil {
+			log.Error(err, configMaplogname+" Unable to get customConfigMap list")
+			return ctrl.Result{}, err
 		}
+		if len(ccmList.Items) == 0 {
+			ccm, version := newCustomConfigMap(&configMap)
+			er := r.Create(ctx, ccm)
+			if er != nil {
+				r.EventRecorder.Eventf(&configMap, corev1.EventTypeWarning, "FailedCreateCustomConfigMap", "Error creating CustomConfigMap: %v", er.Error())
+				return ctrl.Result{}, er
+			}
 
-		//updating configMap with versionInfo
-		if len(configMap.Annotations) == 0 {
-			annotation := make(map[string]string)
-			annotation["currentCustomConfigMapVersion"] = version
-			annotation["customConfigMap-name"] = ccm.Name
-			annotation["updateMethod"] = "ignoreWhenShared"
-			configMap.Annotations = annotation
+			//updating configMap with versionInfo
+			if len(configMap.Annotations) == 0 {
+				annotation := make(map[string]string)
+				annotation["currentCustomConfigMapVersion"] = version
+				annotation["customConfigMap-name"] = ccm.Name
+				annotation["updateMethod"] = "ignoreWhenShared"
+				configMap.Annotations = annotation
+			} else {
+				configMap.Annotations["currentCustomConfigMapVersion"] = version
+				configMap.Annotations["customConfigMap-name"] = ccm.Name
+				configMap.Annotations["updateMethod"] = "ignoreWhenShared"
+			}
+
+			errs := r.Update(ctx, &configMap)
+			if errs != nil {
+				r.EventRecorder.Eventf(&configMap, corev1.EventTypeWarning, "FailedAddingCustomConfigMapVersion", "Error in adding CustomConfigMap version: %v", errs.Error())
+				return ctrl.Result{}, errs
+			}
+			r.EventRecorder.Eventf(&configMap, corev1.EventTypeNormal, "configMap", "update ccm content %v to configMap %v", ccm.Name, configMap.Name)
 		} else {
-			configMap.Annotations["currentCustomConfigMapVersion"] = version
-			configMap.Annotations["customConfigMap-name"] = ccm.Name
-			configMap.Annotations["updateMethod"] = "ignoreWhenShared"
+			if len(ccmList.Items) == 1 {
+				if reflect.DeepEqual(configMap.Data, ccmList.Items[0].Spec.Data) == false || reflect.DeepEqual(configMap.BinaryData, ccmList.Items[0].Spec.BinaryData) == false {
+					errs := r.CreateNewCCM(ctx, &configMap, &ccmList.Items[0])
+					if errs != nil {
+						return ctrl.Result{}, errs
+					}
+				} else {
+					//updating configMap with versionInfo
+					if len(configMap.Annotations) == 0 {
+						annotation := make(map[string]string)
+						annotation["currentCustomConfigMapVersion"] = ccmList.Items[0].Annotations["customConfigMapVersion"]
+						annotation["customConfigMap-name"] = ccmList.Items[0].Name
+						annotation["updateMethod"] = "ignoreWhenShared"
+						configMap.Annotations = annotation
+					} else {
+						configMap.Annotations["currentCustomConfigMapVersion"] = ccmList.Items[0].Annotations["customConfigMapVersion"]
+						configMap.Annotations["customConfigMap-name"] = ccmList.Items[0].Name
+						configMap.Annotations["updateMethod"] = "ignoreWhenShared"
+					}
+
+					errs := r.Update(ctx, &configMap)
+					if errs != nil {
+						r.EventRecorder.Eventf(&configMap, corev1.EventTypeWarning, "FailedAddingCustomConfigMapVersion", "Error in adding CustomConfigMap version: %v", errs.Error())
+						return ctrl.Result{}, errs
+					}
+					r.EventRecorder.Eventf(&configMap, corev1.EventTypeNormal, "configMap", "update ccm content %v to configMap %v", ccmList.Items[0].Name, configMap.Name)
+				}
+			}
 		}
 
-		errs := r.Update(ctx, &configMap)
-		if errs != nil {
-			r.EventRecorder.Eventf(&configMap, corev1.EventTypeWarning, "FailedAddingCustomConfigMapVersion", "Error in adding CustomConfigMap version: %v", errs.Error())
-			return ctrl.Result{}, errs
-		}
-		r.EventRecorder.Eventf(&configMap, corev1.EventTypeNormal, "configMap", "update ccm content %v to configMap %v", ccm.Name, configMap.Name)
 	} else {
 		// version exist it compare the configMap content with currentCCM
 		er := r.UpdateConfigMap(ctx, &configMap)
@@ -238,30 +276,38 @@ func (r *ConfigMapReconciler) CreateNewCCM(ctx context.Context, configMap *corev
 	delete(currentccm.Labels, "current")
 	errs := r.Update(ctx, currentccm)
 	if errs != nil {
-		r.EventRecorder.Eventf(currentccm, corev1.EventTypeWarning, "FailedUpdatingCustomConfigMap", "Error Updating CustomConfigMap: %v", errs)
+		r.EventRecorder.Eventf(currentccm, corev1.EventTypeWarning, "FailedUpdatingCustomConfigMap", "Error Updating CustomConfigMap in removing current label: %v", errs)
 		return errs
 	}
 
 	//delete latest label from latest ccm
+	klog.Info("list latest label from customconfigmap")
 	//getting latest ccm
 	latestccm := customConfigMapv1alpha1.CustomConfigMapList{}
-	err := r.List(ctx, &latestccm, client.MatchingLabels{"name": configMap.Name, "latest": "true"}, client.InNamespace(configMap.Namespace))
-	if err != nil {
-		r.EventRecorder.Eventf(&latestccm, corev1.EventTypeWarning, "FailedUpdatingCustomConfigMap", "Error Updating CustomConfigMap: %v", errs)
-		return err
-	}
-	delete(latestccm.Items[0].Labels, "latest")
-	errs = r.Update(ctx, &latestccm.Items[0])
-	if errs != nil {
-		r.EventRecorder.Eventf(&latestccm, corev1.EventTypeWarning, "FailedUpdatingCustomConfigMap", "Error Updating CustomConfigMap: %v", errs)
-		//reverting the previous change
-		currentccm.Annotations["current"] = "true"
-		errs := r.Update(ctx, currentccm)
-		if errs != nil {
-			r.EventRecorder.Eventf(&latestccm, corev1.EventTypeWarning, "FailedUpdatingCustomConfigMap", "Error Updating CustomConfigMap: %v", errs)
-			return errs
+	for i := 0; i <= 5; i++ {
+		err := r.List(ctx, &latestccm, client.MatchingLabels{"name": configMap.Name, "latest": "true"}, client.InNamespace(configMap.Namespace))
+		if err != nil {
+			r.EventRecorder.Eventf(&latestccm, corev1.EventTypeWarning, "FailedUpdatingCustomConfigMap", "Error Updating CustomConfigMap in getting latest label: %v", errs)
 		}
-		return errs
+		delete(latestccm.Items[0].Labels, "latest")
+		errs = r.Update(ctx, &latestccm.Items[0])
+		if errs != nil {
+			if !strings.Contains(errs.Error(), "changes to the latest version and try again") {
+				klog.Error("list latest label from customconfigmap")
+				r.EventRecorder.Eventf(&latestccm, corev1.EventTypeWarning, "FailedUpdatingCustomConfigMap", "Error Updating CustomConfigMap in removing latest label: %v", errs)
+				//reverting the previous change
+				currentccm.Labels["current"] = "true"
+				errs := r.Update(ctx, currentccm)
+				if errs != nil {
+					r.EventRecorder.Eventf(&latestccm, corev1.EventTypeWarning, "FailedUpdatingCustomConfigMap", "Error Updating CustomConfigMap adding current label: %v", errs)
+					return errs
+				}
+				return errs
+			}
+		}
+		if errs == nil {
+			break
+		}
 	}
 
 	ccmNew, version := newCustomConfigMap(configMap)
@@ -269,13 +315,13 @@ func (r *ConfigMapReconciler) CreateNewCCM(ctx context.Context, configMap *corev
 	if er != nil {
 		r.EventRecorder.Eventf(ccmNew, corev1.EventTypeWarning, "FailedCreateCustomConfigMap", "Error creating CustomConfigMap: %v", er)
 		//reverting the previous change
-		currentccm.Annotations["current"] = "true"
+		currentccm.Labels["current"] = "true"
 		errs := r.Update(ctx, currentccm)
 		if errs != nil {
 			r.EventRecorder.Eventf(currentccm, corev1.EventTypeWarning, "FailedUpdatingCustomConfigMap", "Error Updating CustomConfigMap: %v", errs)
 			return errs
 		}
-		latestccm.Items[0].Annotations["latest"] = "true"
+		latestccm.Items[0].Labels["latest"] = "true"
 		errs = r.Update(ctx, &latestccm.Items[0])
 		if errs != nil {
 			r.EventRecorder.Eventf(&latestccm, corev1.EventTypeWarning, "FailedUpdatingCustomConfigMap", "Error Updating CustomConfigMap: %v", errs)
@@ -288,7 +334,7 @@ func (r *ConfigMapReconciler) CreateNewCCM(ctx context.Context, configMap *corev
 	configMap.Annotations["currentCustomConfigMapVersion"] = version
 	configMap.Annotations["customConfigMap-name"] = ccmNew.Name
 	configMap.Annotations["updateMethod"] = "ignoreWhenShared"
-	err = r.Update(ctx, configMap)
+	err := r.Update(ctx, configMap)
 	if err != nil {
 		return err
 	}
@@ -315,10 +361,10 @@ func (r *ConfigMapReconciler) CreateNewCCM(ctx context.Context, configMap *corev
 				}
 				//update new version
 				deployment.Spec.Template.Annotations["ccm-"+configMap.Name] = version
-				err = r.Update(ctx, &deployment)
-				if err != nil {
-					klog.Error("Failed on updating deployment '%s' Error: %s", split[0], err.Error)
-					return err
+				errs = r.Update(ctx, &deployment)
+				if errs != nil {
+					klog.Error("Failed on updating deployment '%s' Error: %s", split[0], errs.Error)
+					return errs
 				}
 			}
 		}
