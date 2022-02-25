@@ -1,7 +1,6 @@
 vendor/
 labelconfig/*
 main
-configurator
 .history
 .vscode
 .idea
