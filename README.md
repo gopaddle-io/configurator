@@ -5,9 +5,7 @@
 [![Discord](https://discordapp.com/api/guilds/864856848279666730/widget.png?style=banner2)](https://discord.gg/dr24Z4BmP8)
 
 # Configurator
-Configurator is a version control and a sync service that keeps Kubernetes ConfigMaps and Secrets in sync with the deployment. Configurator uses CRDs to create CustomConfigMaps and CustomSecrets that in turn create ConfigMaps and Secrets with a postfix. As and when a change is detected in the CustomConfigMap or CustomSecret, Configurator automaticatlly generates a new ConfigMap with a new postfix. This acts like a version control for the ConfigMaps.
-In order to keep the deployments and statefulsets in sync with the ConfigMap and Secret version, users must start with creating a CustomConfigMap as the first step. This creates a new ConfigMap with a postfix ie., first version. Users then have to reference the ConfigMap along with the postfix in their deployment and satefulset specifications. From them on, users can edit the CustomConfigMap directly. Any change in the CustomConfigMap will be automatically rolled out to all the deployments and statefulsets referencing the initial configMap version. A change in ConfigMap not only creates a new ConfigMap version, but also rolls out a new deployment version. This enables both rolling update and rollback of ConfigMaps in sync with the deployment versions.
-
+Configurator is a version control and a sync service that keeps Kubernetes ConfigMaps and Secrets in sync with the deployments. When a ConfigMap content is changed, Configurator creates a custom resource of type CustomConfigMap (CCM) with a postfix. CCM with a postfix acts like ConfigMap revision. Configurator then copies the modified contents of the ConfigMap in to the CCM resource and triggers a rolling update on deployments using the ConfigMap.  Configurator keeps the ConfigMap contents in sync with the deployment revisions with the help of annotations and works well for both rolling updates and rollbacks. Configurator supports GitOps workflows as well.
 
 # Supported Versions
   - K8s 1.16+
@@ -19,107 +17,35 @@ Check out the [Configurator website](https://gopaddle-io.github.io/configurator/
 
 Join the community at our [discord server]((https://discord.gg/dr24Z4BmP8))
 
-# How to use Configurator.
+# How to install Configurator
+Configurator can be installed using Helm chart.
 
-### Building and Deploying Configurator
-Build the source code and the docker image for Configurator. Push the image to registry and deploy configurator in the cluster.
+### Pre-requisite
+* [Install Helm](https://helm.sh/docs/intro/install/)
+* [Install kubectl in your local environment](https://kubernetes.io/docs/tasks/tools/)
+* Add the contents of the Kubernetes configuration file to your local  ~/.kube/config file
+* Check if you could access your kubernetes cluster using kubectl command
 ```sh
-make clean build push deploy 
+$ kubectl version
+```
+
+### Add configurator helm repository
+Choose Configurator helm repostry based on the Configuration version. To use Configurator version 0.0.2, add the repo below:
+```sh
+$ helm repo add gopaddle_configurator https://github.com/gopaddle-io/configurator/raw/v0.0.2/helm
+```
+
+### Install configurator to cluster
+To install Configurator in the cluster.
+```sh
+$ helm install configurator gopaddle_configurator/configurator --version 0.4.0-alpha
 ```
 
 ### Removing Configurator
-Remove the configurator deployment from cluster and delete local binary and docker image
+To remove Configurator from the cluster.
 ```sh
-make remove clean 
+$ helm delete configurator gopaddle_configurator/configurator
 ```
-
-### Deploy Configurator using YAML files
-YAML files for deploying the latest version of Configurator is available under the deploy folder.You need to deploy the CRDs, the controller and the service/role binding.
-```sh
-kubectl apply -f deploy/crd-customConfigMap.yaml
-kubectl apply -f deploy/crd-customSecret.yaml
-kubectl create ns configurator
-kubectl apply -f deploy/configurator-clusterrole.yaml
-kubectl apply -f deploy/configurator-clusterrolebinding.yaml
-kubectl apply -f deploy/configurator-serviceaccount.yaml
-kubectl apply -f deploy/configurator-deployment.yaml
-```
-Verify if configurator resources are created successfully.
-```sh
-kubectl get deployment -n configurator
-NAME                                 READY   UP-TO-DATE   AVAILABLE   AGE
-configurator-controller              1/1     1            1           4h38m
-```
-
-### Using Configurator
-Once configurator is deployed in the cluster, start creating customConfigMaps. Example customConfigMaps are available under artifacts/examples folder.
-Create customConfigMap. This will create a configMap with a postfix.
-```sh
-kubectl apply -f artifacts/exmaples/example-customConfigMap.yaml
-```
-List the configMap and make a note of the postfix for the first time.
-```sh
-kubectl get configMap -n test
-NAME               DATA   AGE
-testconfig-srseq   1      9s
-```
-Here "srseq" is the postfix.
-Create deployment referencing the newly created configMap and its postfix. Please note the deployment metadata label must contain the config name and the config postfix that was created initially. say <configname>=<postfix>. Under the VolumeMounts section use the complete name of the configMap along with the postfix.
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: busybox-deployment
-  labels:
-   testconfig: srseq
-    app: busybox
-spec:
-  replicas: 1
-  revisionHistoryLimit: 1
-  strategy:
-    type: RollingUpdate
-  selector:
-    matchLabels:
-      app: busybox
-  template:
-    metadata:
-      labels:
-        app: busybox
-    spec:
-      containers:
-      - name: busybox
-        image: busybox
-        imagePullPolicy: IfNotPresent
-        command: ['sh', '-c', 'echo Container 1 is Running ; sleep 3600']
-        volumeMounts:
-        - mountPath: /test
-          name: test-config
-      volumes:
-      - name: test-config
-        configMap:
-          name: testconfig-srseq
-```
-From now, you can directly update the customConfigMap and this will create a configMap with a new postfix and will automatically sync up the related deployments with the newly created configMap.
-Same functionality applies for secrets as well.
-
-### Listing and Viewing the Custom ConfigMaps and Secrets
-```sh
-kubectl get ccm -n <namespace>
-kubectl get customconfigmap -n <namespace>
-kubectl describe ccm -n <namespace>
-kubectl describe customconfigmap -n <namespace>
-kubectl delete ccm -n <namespace>
-kubectl delete customconfigmap -n <namespace>
-kubectl get customsecret -n <namespace>
-kubectl get ccs -n <namespace>
-kubectl describe customsecret -n <namespace>
-kubectl describe ccs -n <namespace>
-kubectl delete customsecret -n <namespace>
-kubectl delete ccs -n <namespace>
-```
-
-### Architecture
-<img src="https://gopaddle-marketing.s3.ap-southeast-2.amazonaws.com/configurartor-architecture.png">
 
 ### License 
 
