@@ -204,6 +204,9 @@ func WithDefaults(clientSet *clientset.ClientSet) CronJobConfigOption {
 
 		//Set OwnerReference and Name
 		config.OwnerReference = *rsObj.OwnerReferences[0].DeepCopy()
+		notAController := false
+		config.OwnerReference.Controller = &notAController
+
 		config.Name = rsObj.OwnerReferences[0].Name + "-" + "purge"
 
 		return nil
