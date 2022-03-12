@@ -24,6 +24,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -52,6 +53,19 @@ func CreatePurgeCronJob(config *cronconfig.CronJobConfig) error {
 
 	switch builder.GetCronJobAPIGroupVersion(config) {
 	case CRONJOB_STABLE_API:
+		//Idempotency check
+		_, err := clientSet.BatchV1.
+			CronJobs(builder.GetCronJobNamespace(config)).
+			Get(clientSet.Ctx, builder.GetCronJobName(config), metav1.GetOptions{})
+		if err == nil {
+			//CronJob already exists
+			return nil
+		} else if !k8serrors.IsNotFound(err) {
+			//Error is not nil, but it's not because CronJob does not exist
+			return errors.Wrap(err, "failed to GET batch/v1 CronJob")
+		}
+		//CronJob does not exist
+
 		cronJob := &batchv1.CronJob{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            builder.GetCronJobName(config),
@@ -87,6 +101,19 @@ func CreatePurgeCronJob(config *cronconfig.CronJobConfig) error {
 		return nil
 
 	case CRONJOB_BETA_API:
+		//Idempotency check
+		_, err := clientSet.BatchV1beta1.
+			CronJobs(builder.GetCronJobNamespace(config)).
+			Get(clientSet.Ctx, builder.GetCronJobName(config), metav1.GetOptions{})
+		if err == nil {
+			//CronJob already exists
+			return nil
+		} else if !k8serrors.IsNotFound(err) {
+			//Error is not nil, but it's not because CronJob does not exist
+			return errors.Wrap(err, "failed to GET batch/v1beta1 CronJob")
+		}
+		//CronJob does not exist
+
 		cronJob := &batchv1beta1.CronJob{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            builder.GetCronJobName(config),
