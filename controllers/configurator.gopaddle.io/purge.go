@@ -26,6 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/klog/v2"
 )
 
 func CreatePurgeCronJob(config *cronconfig.CronJobConfig) error {
@@ -59,6 +60,10 @@ func CreatePurgeCronJob(config *cronconfig.CronJobConfig) error {
 			Get(clientSet.Ctx, builder.GetCronJobName(config), metav1.GetOptions{})
 		if err == nil {
 			//CronJob already exists
+			klog.Info("Skipping CronJob creation: CronJob %s already exists in the %s Namespace",
+				builder.GetCronJobName(config),
+				builder.GetCronJobNamespace(config),
+			)
 			return nil
 		} else if !k8serrors.IsNotFound(err) {
 			//Error is not nil, but it's not because CronJob does not exist
@@ -93,11 +98,14 @@ func CreatePurgeCronJob(config *cronconfig.CronJobConfig) error {
 				FailedJobsHistoryLimit:     builder.GetCronJobFailedJobsHistoryLimit(config),
 			},
 		}
-		_, err = clientSet.BatchV1.CronJobs(config.Namespace).Create(clientSet.Ctx, cronJob, metav1.CreateOptions{})
+		obj, err := clientSet.BatchV1.CronJobs(config.Namespace).Create(clientSet.Ctx, cronJob, metav1.CreateOptions{})
 		if err != nil {
 			return errors.Wrap(err, "failed to create Purge Job CronJob (batch/v1) API object")
 		}
-
+		klog.Infof("Successfully created batch/v1 CronJob %s in the %s Namespace",
+			obj.Name,
+			obj.Namespace,
+		)
 		return nil
 
 	case CRONJOB_BETA_API:
@@ -107,6 +115,10 @@ func CreatePurgeCronJob(config *cronconfig.CronJobConfig) error {
 			Get(clientSet.Ctx, builder.GetCronJobName(config), metav1.GetOptions{})
 		if err == nil {
 			//CronJob already exists
+			klog.Info("Skipping CronJob creation: CronJob %s already exists in the %s Namespace",
+				builder.GetCronJobName(config),
+				builder.GetCronJobNamespace(config),
+			)
 			return nil
 		} else if !k8serrors.IsNotFound(err) {
 			//Error is not nil, but it's not because CronJob does not exist
@@ -141,10 +153,14 @@ func CreatePurgeCronJob(config *cronconfig.CronJobConfig) error {
 				FailedJobsHistoryLimit:     builder.GetCronJobFailedJobsHistoryLimit(config),
 			},
 		}
-		_, err = clientSet.BatchV1beta1.CronJobs(config.Namespace).Create(clientSet.Ctx, cronJob, metav1.CreateOptions{})
+		obj, err := clientSet.BatchV1beta1.CronJobs(config.Namespace).Create(clientSet.Ctx, cronJob, metav1.CreateOptions{})
 		if err != nil {
 			return errors.Wrap(err, "failed to create Purge Job CronJob (batch/v1beta1) API object")
 		}
+		klog.Infof("Successfully created batch/v1beta1 CronJob %s in the %s Namespace",
+			obj.Name,
+			obj.Namespace,
+		)
 		return nil
 
 	default:
