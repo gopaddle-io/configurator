@@ -106,7 +106,7 @@ func WithDefaults() ClientSetOption {
 		clientSet.Discovery, err = discovery.NewDiscoveryClientForConfig(cfg)
 		if err != nil {
 			return errors.Wrapf(err, "failed to generate "+
-				"discovery client for PurgeClientSet",
+				"discovery client for Purge ClientSet",
 			)
 		}
 

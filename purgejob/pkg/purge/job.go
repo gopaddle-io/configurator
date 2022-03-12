@@ -226,7 +226,7 @@ func PurgeCCMAndCS() error {
 						//purge ccm
 						err := configuratorClientSet.ConfiguratorV1alpha1().CustomSecrets(ns.Name).Delete(context.TODO(), cs.Name, metav1.DeleteOptions{})
 						if err != nil {
-							return errors.Wrapf(err, "Failed on parge customSecret '%s'", cs.Name)
+							return errors.Wrapf(err, "Failed on purge customSecret '%s'", cs.Name)
 						} else {
 							klog.Infof(fmt.Sprintf("customSecret purged successfully '%s'", cs.Name), time.Now().UTC())
 						}
