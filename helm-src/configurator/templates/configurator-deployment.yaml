@@ -29,6 +29,9 @@ spec:
         env:
         - name: "PURGE_JOB_IMAGE"
           value: "{{ .Values.configuratorController.purgeJob.image.repository }}:{{ coalesce .Values.configuratorController.purgeJob.image.tag .Chart.AppVersion }}"
+        volumeMounts:
+        - name: podinfo
+          mountPath: /etc/podinfo
       volumes:
       - name: podinfo
         downwardAPI:

@@ -77,11 +77,11 @@ func WithDefaults(clientSet *clientset.ClientSet) CronJobConfigOption {
 		}
 
 		const (
-			POD_NAME_FILE_PATH          = "/etc/podinfo/name"
-			POD_NAMESPACE_FILE_PATH     = "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
-			CONFIGURATOR_CONTAINER_NAME = "configurator"
-			CRONJOB_CONTAINER_NAME      = CONFIGURATOR_CONTAINER_NAME + "-" + "purge"
-			PURGE_JOB_IMAGE_ENV_KEY     = "PURGE_JOB_IMAGE"
+			POD_NAME_FILE_PATH             = "/etc/podinfo/name"
+			POD_NAMESPACE_FILE_PATH        = "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
+			CONFIGURATOR_CONTAINER_NAME    = "configurator"
+			CRONJOB_CONTAINER_NAME_POSTFIX = "-purge"
+			PURGE_JOB_IMAGE_ENV_KEY        = "PURGE_JOB_IMAGE"
 			//Scheduled to run every 15th minute of every hour
 			CRONJOB_SCHEDULE           = "*/15 * * * *"
 			V1_CONCURRENCY_POLICY      = batchv1.ReplaceConcurrent
@@ -92,7 +92,6 @@ func WithDefaults(clientSet *clientset.ClientSet) CronJobConfigOption {
 		var history_limit int32 = 1
 
 		//Set Parameters
-		config.ContainerName = CRONJOB_CONTAINER_NAME
 		config.Schedule = CRONJOB_SCHEDULE
 		config.V1ConcurrencyPolicy = V1_CONCURRENCY_POLICY
 		config.V1beta1ConcurrencyPolicy = V1BETA1_CONCURRENCY_POLICY
@@ -140,8 +139,9 @@ func WithDefaults(clientSet *clientset.ClientSet) CronJobConfigOption {
 
 		for index, container := range podObj.Spec.Containers {
 			if container.Name == CONFIGURATOR_CONTAINER_NAME {
-				//Set CronJobConfig ImagePullPolicy
+				//Set CronJobConfig ImagePullPolicy and ContainerName
 				config.ImagePullPolicy = podObj.Spec.Containers[index].ImagePullPolicy
+				config.ContainerName = podObj.Spec.Containers[index].Name + CRONJOB_CONTAINER_NAME_POSTFIX
 				break
 			}
 		}

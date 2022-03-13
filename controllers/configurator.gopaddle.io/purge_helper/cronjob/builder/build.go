@@ -92,7 +92,7 @@ func WithDefaults() CronJobBuilderOption {
 				return nil
 			}
 			return append([]corev1.Container{}, corev1.Container{
-				Name:            config.Name,
+				Name:            config.ContainerName,
 				ImagePullPolicy: config.ImagePullPolicy,
 				Image:           config.Image,
 			})
