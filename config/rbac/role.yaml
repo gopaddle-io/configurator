@@ -33,6 +33,32 @@ rules:
   - patch
   - update
 - apiGroups:
+  - configurator.gopaddle.io
+  resources:
+  - customsecrets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - configurator.gopaddle.io
+  resources:
+  - customsecrets/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - configurator.gopaddle.io
+  resources:
+  - customsecrets/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
   - ""
   resources:
   - configmaps
@@ -54,6 +80,32 @@ rules:
   - ""
   resources:
   - configmaps/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - secrets/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - secrets/status
   verbs:
   - get
   - patch

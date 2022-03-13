@@ -4,7 +4,7 @@ go 1.15
 
 require (
 	github.com/golang/glog v1.0.0
-	github.com/gopaddle-io/configurator v0.0.1
+	github.com/gopaddle-io/configurator v0.0.2-a
 	github.com/gorilla/mux v1.8.0 // indirect
 	k8s.io/api v0.22.4
 	k8s.io/apimachinery v0.22.4

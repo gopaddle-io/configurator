@@ -13,4 +13,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: trov/configurator
-  newTag: "1.10"
+  newTag: "1.6"

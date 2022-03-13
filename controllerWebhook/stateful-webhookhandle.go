@@ -41,7 +41,7 @@ func (whsvr *WebhookServer) StatefulSetController(w http.ResponseWriter, r *http
 			},
 		}
 	} else {
-		admissionResponse = statefulsteMutate(&ar)
+		admissionResponse = statefulsetMutate(&ar)
 	}
 	admissionReview := v1.AdmissionReview{}
 	admissionReview.Kind = "AdmissionReview"
@@ -65,7 +65,7 @@ func (whsvr *WebhookServer) StatefulSetController(w http.ResponseWriter, r *http
 }
 
 //statefulsetmutate it create the AdmisionResponse of statefulset patch
-func statefulsteMutate(ar *v1.AdmissionReview) *v1.AdmissionResponse {
+func statefulsetMutate(ar *v1.AdmissionReview) *v1.AdmissionResponse {
 	req := ar.Request
 	var statefulset appsV1.StatefulSet
 	if err := json.Unmarshal(req.Object.Raw, &statefulset); err != nil {
@@ -152,8 +152,253 @@ func createStatefulsetPatch(statefulset *appsV1.StatefulSet) ([]byte, error) {
 				}
 				addnewAnnotation["ccm-"+configMap.Name] = configMap.Annotations["currentCustomConfigMapVersion"]
 			}
+		} else if volume.Secret != nil {
+			if statefulset.Spec.Template.Annotations["cs-"+volume.Secret.SecretName] == "" || len(statefulset.Spec.Template.Annotations) == 0 {
+				//reading SecretVersion from Secret
+				//get clusterConf
+				var cfg *rest.Config
+				var err error
+				cfg, err = rest.InClusterConfig()
+				//create clientset
+				clientSet, err := kubernetes.NewForConfig(cfg)
+				if err != nil {
+					klog.Fatalf("Error building kubernetes clientset: %s", err.Error(), time.Now().UTC())
+				}
+				secret, err := clientSet.CoreV1().Secrets(statefulset.Namespace).Get(context.TODO(), volume.Secret.SecretName, metav1.GetOptions{})
+				if err != nil {
+					return nil, err
+				}
+
+				//adding annotation to configMap
+				if secret.Annotations["statefulsets"] == "" {
+					if len(secret.Annotations) == 0 {
+						annotation := make(map[string]string)
+						annotation["statefulsets"] = statefulset.Name
+						secret.Annotations = annotation
+					} else {
+						secret.Annotations["statefulsets"] = statefulset.Name
+					}
+				} else {
+					// check that deployment name already exist in secretName
+					annotation := secret.Annotations["statefulsets"]
+					split := strings.Split(annotation, ",")
+					check := false
+					for _, s := range split {
+						if s == statefulset.Name {
+							check = true
+						}
+					}
+					if !check {
+						secret.Annotations["statefulsets"] = statefulset.Name
+					}
+				}
+				secret, errs := clientSet.CoreV1().Secrets(statefulset.Namespace).Update(context.TODO(), secret, metav1.UpdateOptions{})
+				if errs != nil {
+					return nil, errs
+				}
+				addnewAnnotation["cs-"+secret.Name] = secret.Annotations["currentCustomSecretVersion"]
+			}
 		}
 	}
+
+	//add new annotation form envfrom container
+	for _, container := range statefulset.Spec.Template.Spec.Containers {
+		for _, env := range container.EnvFrom {
+			if env.ConfigMapRef != nil {
+				//check already configMapname exist or not
+				if statefulset.Spec.Template.Annotations["ccm-"+env.ConfigMapRef.Name] == "" || len(statefulset.Spec.Template.Annotations) == 0 {
+					//reading configmapVersion from configmap
+					//get clusterConf
+					var cfg *rest.Config
+					var err error
+					cfg, err = rest.InClusterConfig()
+					//create clientset
+					clientSet, err := kubernetes.NewForConfig(cfg)
+					if err != nil {
+						klog.Fatalf("Error building kubernetes clientset: %s", err.Error(), time.Now().UTC())
+					}
+					configMap, err := clientSet.CoreV1().ConfigMaps(statefulset.Namespace).Get(context.TODO(), env.ConfigMapRef.Name, metav1.GetOptions{})
+					if err != nil {
+						return nil, err
+					}
+					//adding annotation to configMap
+					if configMap.Annotations["statefulsets"] == "" {
+						if len(configMap.Annotations) == 0 {
+							annotation := make(map[string]string)
+							annotation["statefulsets"] = statefulset.Name
+							configMap.Annotations = annotation
+						} else {
+							configMap.Annotations["statefulsets"] = statefulset.Name
+						}
+					} else {
+						// check that deployment name already exist in configMapName
+						annotation := configMap.Annotations["statefulsets"]
+						split := strings.Split(annotation, ",")
+						check := false
+						for _, s := range split {
+							if s == statefulset.Name {
+								check = true
+							}
+						}
+						if !check {
+							configMap.Annotations["statefulsets"] = statefulset.Name
+						}
+					}
+					configMap, errs := clientSet.CoreV1().ConfigMaps(statefulset.Namespace).Update(context.TODO(), configMap, metav1.UpdateOptions{})
+					if errs != nil {
+						return nil, errs
+					}
+					addnewAnnotation["ccm-"+configMap.Name] = configMap.Annotations["currentCustomConfigMapVersion"]
+				}
+			} else if env.SecretRef != nil {
+				if statefulset.Spec.Template.Annotations["cs-"+env.SecretRef.Name] == "" || len(statefulset.Spec.Template.Annotations) == 0 {
+					//reading SecretVersion from Secret
+					//get clusterConf
+					var cfg *rest.Config
+					var err error
+					cfg, err = rest.InClusterConfig()
+					//create clientset
+					clientSet, err := kubernetes.NewForConfig(cfg)
+					if err != nil {
+						klog.Fatalf("Error building kubernetes clientset: %s", err.Error(), time.Now().UTC())
+					}
+					secret, err := clientSet.CoreV1().Secrets(statefulset.Namespace).Get(context.TODO(), env.SecretRef.Name, metav1.GetOptions{})
+					if err != nil {
+						return nil, err
+					}
+
+					//adding annotation to configMap
+					if secret.Annotations["statefulsets"] == "" {
+						if len(secret.Annotations) == 0 {
+							annotation := make(map[string]string)
+							annotation["statefulsets"] = statefulset.Name
+							secret.Annotations = annotation
+						} else {
+							secret.Annotations["statefulsets"] = statefulset.Name
+						}
+					} else {
+						// check that deployment name already exist in secretName
+						annotation := secret.Annotations["statefulsets"]
+						split := strings.Split(annotation, ",")
+						check := false
+						for _, s := range split {
+							if s == statefulset.Name {
+								check = true
+							}
+						}
+						if !check {
+							secret.Annotations["statefulsets"] = statefulset.Name
+						}
+					}
+					secret, errs := clientSet.CoreV1().Secrets(statefulset.Namespace).Update(context.TODO(), secret, metav1.UpdateOptions{})
+					if errs != nil {
+						return nil, errs
+					}
+					addnewAnnotation["cs-"+secret.Name] = secret.Annotations["currentCustomSecretVersion"]
+				}
+			}
+		}
+	}
+
+	//add new annotation form envfrom inticontainer
+	for _, container := range statefulset.Spec.Template.Spec.InitContainers {
+		for _, env := range container.EnvFrom {
+			if env.ConfigMapRef != nil {
+				//check already configMapname exist or not
+				if statefulset.Spec.Template.Annotations["ccm-"+env.ConfigMapRef.Name] == "" || len(statefulset.Spec.Template.Annotations) == 0 {
+					//reading configmapVersion from configmap
+					//get clusterConf
+					var cfg *rest.Config
+					var err error
+					cfg, err = rest.InClusterConfig()
+					//create clientset
+					clientSet, err := kubernetes.NewForConfig(cfg)
+					if err != nil {
+						klog.Fatalf("Error building kubernetes clientset: %s", err.Error(), time.Now().UTC())
+					}
+					configMap, err := clientSet.CoreV1().ConfigMaps(statefulset.Namespace).Get(context.TODO(), env.ConfigMapRef.Name, metav1.GetOptions{})
+					if err != nil {
+						return nil, err
+					}
+					//adding annotation to configMap
+					if configMap.Annotations["statefulsets"] == "" {
+						if len(configMap.Annotations) == 0 {
+							annotation := make(map[string]string)
+							annotation["statefulsets"] = statefulset.Name
+							configMap.Annotations = annotation
+						} else {
+							configMap.Annotations["statefulsets"] = statefulset.Name
+						}
+					} else {
+						// check that deployment name already exist in configMapName
+						annotation := configMap.Annotations["statefulsets"]
+						split := strings.Split(annotation, ",")
+						check := false
+						for _, s := range split {
+							if s == statefulset.Name {
+								check = true
+							}
+						}
+						if !check {
+							configMap.Annotations["statefulsets"] = statefulset.Name
+						}
+					}
+					configMap, errs := clientSet.CoreV1().ConfigMaps(statefulset.Namespace).Update(context.TODO(), configMap, metav1.UpdateOptions{})
+					if errs != nil {
+						return nil, errs
+					}
+					addnewAnnotation["ccm-"+configMap.Name] = configMap.Annotations["currentCustomConfigMapVersion"]
+				}
+			} else if env.SecretRef != nil {
+				if statefulset.Spec.Template.Annotations["cs-"+env.SecretRef.Name] == "" || len(statefulset.Spec.Template.Annotations) == 0 {
+					//reading SecretVersion from Secret
+					//get clusterConf
+					var cfg *rest.Config
+					var err error
+					cfg, err = rest.InClusterConfig()
+					//create clientset
+					clientSet, err := kubernetes.NewForConfig(cfg)
+					if err != nil {
+						klog.Fatalf("Error building kubernetes clientset: %s", err.Error(), time.Now().UTC())
+					}
+					secret, err := clientSet.CoreV1().Secrets(statefulset.Namespace).Get(context.TODO(), env.SecretRef.Name, metav1.GetOptions{})
+					if err != nil {
+						return nil, err
+					}
+
+					//adding annotation to configMap
+					if secret.Annotations["statefulsets"] == "" {
+						if len(secret.Annotations) == 0 {
+							annotation := make(map[string]string)
+							annotation["statefulsets"] = statefulset.Name
+							secret.Annotations = annotation
+						} else {
+							secret.Annotations["statefulsets"] = statefulset.Name
+						}
+					} else {
+						// check that deployment name already exist in secretName
+						annotation := secret.Annotations["statefulsets"]
+						split := strings.Split(annotation, ",")
+						check := false
+						for _, s := range split {
+							if s == statefulset.Name {
+								check = true
+							}
+						}
+						if !check {
+							secret.Annotations["statefulsets"] = statefulset.Name
+						}
+					}
+					secret, errs := clientSet.CoreV1().Secrets(statefulset.Namespace).Update(context.TODO(), secret, metav1.UpdateOptions{})
+					if errs != nil {
+						return nil, errs
+					}
+					addnewAnnotation["cs-"+secret.Name] = secret.Annotations["currentCustomSecretVersion"]
+				}
+			}
+		}
+	}
+
 	//remove annotation in deployment if that configmap name is not there
 	statefulsetAnnotation := make(map[string]string)
 	removeAnnotation := make(map[string]string)
@@ -169,6 +414,61 @@ func createStatefulsetPatch(statefulset *appsV1.StatefulSet) ([]byte, error) {
 						}
 					}
 				}
+				for _, container := range statefulset.Spec.Template.Spec.Containers {
+					for _, env := range container.EnvFrom {
+						if env.ConfigMapRef != nil {
+							if key == "ccm-"+env.ConfigMapRef.Name {
+								check = true
+								statefulsetAnnotation[key] = value
+							}
+						}
+					}
+				}
+
+				for _, initContainer := range statefulset.Spec.Template.Spec.InitContainers {
+					for _, env := range initContainer.EnvFrom {
+						if env.ConfigMapRef != nil {
+							if key == "ccm-"+env.ConfigMapRef.Name {
+								check = true
+								statefulsetAnnotation[key] = value
+							}
+						}
+					}
+				}
+
+				if !check {
+					removeAnnotation[key] = value
+				}
+			} else if strings.Contains(key, "cs-") {
+				check := false
+				for _, volume := range statefulset.Spec.Template.Spec.Volumes {
+					if volume.Secret != nil {
+						if key == "cs-"+volume.Secret.SecretName {
+							check = true
+							statefulsetAnnotation[key] = value
+						}
+					}
+				}
+				for _, container := range statefulset.Spec.Template.Spec.Containers {
+					for _, env := range container.EnvFrom {
+						if env.SecretRef != nil {
+							if key == "cs-"+env.SecretRef.Name {
+								check = true
+								statefulsetAnnotation[key] = value
+							}
+						}
+					}
+				}
+				for _, initContainer := range statefulset.Spec.Template.Spec.InitContainers {
+					for _, env := range initContainer.EnvFrom {
+						if env.SecretRef != nil {
+							if key == "cs-"+env.SecretRef.Name {
+								check = true
+								statefulsetAnnotation[key] = value
+							}
+						}
+					}
+				}
 				if !check {
 					removeAnnotation[key] = value
 				}
@@ -177,6 +477,9 @@ func createStatefulsetPatch(statefulset *appsV1.StatefulSet) ([]byte, error) {
 			}
 		}
 	}
+	//it to handle statefulset in pod validation
+	addnewAnnotation["config-sync-controller"] = "configurator"
+
 	patch = append(patch, updateAnnotation(statefulsetAnnotation, addnewAnnotation, removeAnnotation)...)
 	return json.Marshal(patch)
 }

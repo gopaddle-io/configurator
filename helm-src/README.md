@@ -19,7 +19,7 @@ make remove-configurator
 To use the helm chart, add the repository to your local helm installation.
 
 ```
-helm repo add gopaddle_configurator https://gopaddle-io.github.io/configurator/helm
+helm repo add gopaddle_configurator https://github.com/gopaddle-io/configurator/raw/v0.0.2/helm
 helm repo up
 ```
 
