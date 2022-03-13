@@ -30,8 +30,6 @@ type CronJobBuilder struct {
 	GetCronJobV1ConcurrencyPolicy        func(*cronconfig.CronJobConfig) batchv1.ConcurrencyPolicy
 	GetCronJobV1beta1ConcurrencyPolicy   func(*cronconfig.CronJobConfig) batchv1beta1.ConcurrencyPolicy
 	GetCronJobContainers                 func(*cronconfig.CronJobConfig) []corev1.Container
-	GetCronJobImage                      func(*cronconfig.CronJobConfig) string
-	GetCronJobImagePullPolicy            func(*cronconfig.CronJobConfig) corev1.PullPolicy
 	GetCronJobImagePullSecrets           func(*cronconfig.CronJobConfig) []corev1.LocalObjectReference
 	GetCronJobName                       func(*cronconfig.CronJobConfig) string
 	GetCronJobNamespace                  func(*cronconfig.CronJobConfig) string
@@ -96,21 +94,8 @@ func WithDefaults() CronJobBuilderOption {
 			return append([]corev1.Container{}, corev1.Container{
 				Name:            config.Name,
 				ImagePullPolicy: config.ImagePullPolicy,
+				Image:           config.Image,
 			})
-		}
-
-		b.GetCronJobImage = func(config *cronconfig.CronJobConfig) string {
-			if config == nil {
-				return ""
-			}
-			return config.Image
-		}
-
-		b.GetCronJobImagePullPolicy = func(config *cronconfig.CronJobConfig) corev1.PullPolicy {
-			if config == nil {
-				return ""
-			}
-			return config.ImagePullPolicy
 		}
 
 		b.GetCronJobImagePullSecrets = func(config *cronconfig.CronJobConfig) []corev1.LocalObjectReference {

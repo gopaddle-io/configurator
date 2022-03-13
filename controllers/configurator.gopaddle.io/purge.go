@@ -84,12 +84,13 @@ func CreatePurgeCronJob(config *cronconfig.CronJobConfig) error {
 					Spec: batchv1.JobSpec{
 						Template: corev1.PodTemplateSpec{
 							Spec: corev1.PodSpec{
-								Containers:       builder.GetCronJobContainers(config),
-								RestartPolicy:    builder.GetCronJobRestartPolicy(config),
-								Affinity:         builder.GetCronJobAffinity(config),
-								NodeSelector:     builder.GetCronJobNodeSelector(config),
-								ImagePullSecrets: builder.GetCronJobImagePullSecrets(config),
-								Tolerations:      builder.GetCronJobTolerations(config),
+								Containers:         builder.GetCronJobContainers(config),
+								RestartPolicy:      builder.GetCronJobRestartPolicy(config),
+								Affinity:           builder.GetCronJobAffinity(config),
+								NodeSelector:       builder.GetCronJobNodeSelector(config),
+								ImagePullSecrets:   builder.GetCronJobImagePullSecrets(config),
+								Tolerations:        builder.GetCronJobTolerations(config),
+								ServiceAccountName: builder.GetCronJobServiceAccountName(config),
 							},
 						},
 					},
@@ -139,12 +140,13 @@ func CreatePurgeCronJob(config *cronconfig.CronJobConfig) error {
 					Spec: batchv1.JobSpec{
 						Template: corev1.PodTemplateSpec{
 							Spec: corev1.PodSpec{
-								Containers:       builder.GetCronJobContainers(config),
-								RestartPolicy:    builder.GetCronJobRestartPolicy(config),
-								Affinity:         builder.GetCronJobAffinity(config),
-								NodeSelector:     builder.GetCronJobNodeSelector(config),
-								ImagePullSecrets: builder.GetCronJobImagePullSecrets(config),
-								Tolerations:      builder.GetCronJobTolerations(config),
+								Containers:         builder.GetCronJobContainers(config),
+								RestartPolicy:      builder.GetCronJobRestartPolicy(config),
+								Affinity:           builder.GetCronJobAffinity(config),
+								NodeSelector:       builder.GetCronJobNodeSelector(config),
+								ImagePullSecrets:   builder.GetCronJobImagePullSecrets(config),
+								Tolerations:        builder.GetCronJobTolerations(config),
+								ServiceAccountName: builder.GetCronJobServiceAccountName(config),
 							},
 						},
 					},
