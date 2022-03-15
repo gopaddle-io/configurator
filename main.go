@@ -67,7 +67,11 @@ func main() {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	//trigger a purge job
-	configuratorgopaddleiocontrollers.PurgeJob()
+	err := configuratorgopaddleiocontrollers.CreatePurgeCronJob(nil)
+	if err != nil {
+		setupLog.Error(err, "failed to create Purge Job")
+		os.Exit(1)
+	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,

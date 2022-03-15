@@ -26,6 +26,19 @@ spec:
         name: configurator
         resources:
           {{- .Values.configuratorController.resources | toYaml | nindent 10 }}
+        env:
+        - name: "PURGE_JOB_IMAGE"
+          value: "{{ .Values.configuratorController.purgeJob.image.repository }}:{{ coalesce .Values.configuratorController.purgeJob.image.tag .Chart.AppVersion }}"
+        volumeMounts:
+        - name: podinfo
+          mountPath: /etc/podinfo
+      volumes:
+      - name: podinfo
+        downwardAPI:
+          items:
+          - path: "name"
+            fieldRef:
+              fieldPath: metadata.name
       initContainers:
       - image: "{{ .Values.configuratorController.image.initRepository }}:{{ coalesce .Values.configuratorController.image.initTag .Chart.AppVersion }}"
         name: init-controller

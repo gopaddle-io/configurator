@@ -112,5 +112,17 @@ rules:
     - create
     - patch
     - update
-
+  - apiGroups:
+    - ""
+    resources:
+    - pods
+    verbs:
+    - get
+  - apiGroups:
+    - batch
+    resources:
+    - cronjobs
+    verbs:
+    - get
+    - create
 {{- end}}

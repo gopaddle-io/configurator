@@ -1,6 +1,7 @@
 
 # Image URL to use all building/pushing image targets
 IMG ?= controller:latest
+PURGE_JOB_IMAGE ?= configurator-purge:latest
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false"
 
@@ -108,6 +109,13 @@ GOBIN=$(PROJECT_DIR)/bin go get $(2) ;\
 rm -rf $$TMP_DIR ;\
 }
 endef
+
+##@ Configurator PurgeJob
+
+purgejob-image: ## Build Linux_amd64 image for the Purge Job
+	@cd purgejob && docker build -t ${PURGE_JOB_IMAGE} .
+
+
 
 helm:
 	cd helm && helm package ../helm-src/configurator
