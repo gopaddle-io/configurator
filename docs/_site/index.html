@@ -326,10 +326,14 @@ data().then(result=>result.forEach((item, index) => {
   const figure = document.createElement("figure");
   figure.setAttribute("style","display:inline-block;text-align:center;")
   figure.appendChild(img);
-  figure.appendChild(figcaption);
+  figure.onmouseover = (event)=>{
+    figure.appendChild(figcaption);
+  }
+  figure.onmouseout = (event)=>{
+    figure.removeChild(figcaption);
+  }
   //figure setup
   document.getElementById('contributors-list').appendChild(figure);
-
 }));
 </script>
 
