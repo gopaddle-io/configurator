@@ -324,7 +324,7 @@ data().then(result=>result.forEach((item, index) => {
   figcaption.innerText = item.login;
   //label setup
   const figure = document.createElement("figure");
-  figure.setAttribute("style","display:inline-block;text-align:center;")
+  figure.setAttribute("style","display:inline-block;text-align:center;margin: 3%;")
   figure.appendChild(img);
   figure.onmouseover = (event)=>{
     figure.insertBefore(figcaption,img);
