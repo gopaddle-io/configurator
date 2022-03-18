@@ -302,21 +302,40 @@
 </div>
 
 <h2 id="thanks-to-all-contributors-for-their-effort">Thanks to all contributors for their effort</h2>
-
+<div id="contributors-list">
+</div>
 <script type="module">
-import { Octokit } from "https://cdn.skypack.dev/@octokit/core";
 
-const octokit = new Octokit();
+const url = 'https://api.github.com/repos/gopaddle-io/configurator/contributors?page=1&?access_token=fff';
 
-await octokit.request('GET /repos/gopaddle-io/configurator/stats/contributors', {
-  owner: 'gopaddle-io',
-  repo: 'configurator'
+function data ()
+{
+  return(fetch(url,{
+  method:'GET'
+}).then((res)=>{return(res.json())}));
+}
+data().then(result=>result.forEach((item, index) => {
 
-}).then((resp) => {
-  resp.data.forEach((r) => {
-    console.log(r.author.login);
-  })
-  });</script>
+  const img = document.createElement("img");
+  img.setAttribute("src", item.avatar_url);
+  img.setAttribute("style", 'height:40px;width:40px;border-radius:100%;border:2px solid #D0D0D7;');
+  //avatar setup
+  const figcaption = document.createElement("figcaption");
+  figcaption.innerText = item.login;
+  //label setup
+  const figure = document.createElement("figure");
+  figure.setAttribute("style","display:inline-block;text-align:center;margin: 3%;")
+  figure.appendChild(img);
+  figure.onmouseover = (event)=>{
+    figure.insertBefore(figcaption,img);
+  }
+  figure.onmouseout = (event)=>{
+    figure.removeChild(figcaption);
+  }
+  //figure setup
+  document.getElementById('contributors-list').appendChild(figure);
+}));
+</script>
 
 
     </section>
