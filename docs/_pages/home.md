@@ -49,6 +49,9 @@ feature_row1:
 
 ## Thanks to all contributors for their effort
 
+<div id="contributors-list">
+</div>
+
 <script type="module">
 
 const url = 'https://api.github.com/repos/gopaddle-io/configurator/contributors?page=1&?access_token=fff';
