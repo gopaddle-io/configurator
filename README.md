@@ -43,7 +43,7 @@ $ helm install configurator gopaddle_configurator/configurator --version 0.4.0-a
 ```
 
 ### Removing Configurator
-To remove Configurator from the cluster.
+To remove Configurator from the Cluster.
 ```sh
 $ helm delete configurator gopaddle_configurator/configurator
 ```
