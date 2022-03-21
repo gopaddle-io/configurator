@@ -58,3 +58,12 @@ $ helm delete configurator gopaddle_configurator/configurator
 
 ## Maintainers
 Congurator is maintained by [gopaddle.io](https://gopaddle.io) team.
+
+
+##TO clone this configurator into local repository
+    1. FORK this Project 
+    2. CLone this TO your Local System
+    3. and now try to edit what you want // basically what you want to contriute
+    4. push this to your repository and commit it 
+    5. And make a pull request into that and add tags
+    6. Ask for Merge by the mentors if they think it works or not
