@@ -28,7 +28,7 @@ Configurator can be installed using Helm chart.
 ```sh
 $ kubectl version
 ```
-
+--
 ### Add configurator helm repository
 Choose Configurator helm repostry based on the Configuration version. To use Configurator version 0.0.2, add the repo below:
 ```sh
