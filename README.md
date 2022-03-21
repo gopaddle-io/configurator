@@ -7,7 +7,7 @@
 # Configurator
 Configurator is a version control and a sync service that keeps Kubernetes ConfigMaps and Secrets in sync with the deployments. When a ConfigMap content is changed, Configurator creates a custom resource of type CustomConfigMap (CCM) with a postfix. CCM with a postfix acts like ConfigMap revision. Configurator then copies the modified contents of the ConfigMap in to the CCM resource and triggers a rolling update on deployments using the ConfigMap.  Configurator keeps the ConfigMap contents in sync with the deployment revisions with the help of annotations and works well for both rolling updates and rollbacks. Configurator supports GitOps workflows as well.
 
-# Supported Versions
+
   - K8s 1.16+
 
 # Contributing
