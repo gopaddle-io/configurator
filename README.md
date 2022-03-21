@@ -16,7 +16,7 @@ Check the [CONTRIBUTING.md](/CONTRIBUTING.md) file to start contributing to the 
 Check out the [Configurator website](https://gopaddle-io.github.io/configurator/) for quick and easy navigation of all documentaion and additional resources. 
 
 Join the community at our [discord server]((https://discord.gg/dr24Z4BmP8))
-
+join the stack community [discord server]((https://stackshare.io/gopaddleio/gopaddle))
 # How to install Configurator
 Configurator can be installed using Helm chart.
 
