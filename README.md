@@ -58,3 +58,6 @@ $ helm delete configurator gopaddle_configurator/configurator
 
 ## Maintainers
 Congurator is maintained by [gopaddle.io](https://gopaddle.io) team.
+
+
+## ommit should be there
