@@ -17,7 +17,7 @@ Check out the [Configurator website](https://gopaddle-io.github.io/configurator/
 
 Join the community at our [discord server]((https://discord.gg/dr24Z4BmP8))
 
-# How to install Configurator
+# How    to install Configurator
 Configurator can be installed using Helm chart.
 
 ### Pre-requisite
