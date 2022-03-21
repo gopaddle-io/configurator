@@ -30,7 +30,7 @@ Configurator can be installed using Helm chart.
 $ kubectl version
 ```
 
-### Add configurator helm repository
+### Add configurator helm Repository
 Choose Configurator helm repostry based on the Configuration version. To use Configurator version 0.0.2, add the repo below:
 ```sh
 $ helm repo add gopaddle_configurator https://github.com/gopaddle-io/configurator/raw/v0.0.2/helm
