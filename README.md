@@ -57,4 +57,4 @@ $ helm delete configurator gopaddle_configurator/configurator
 3. Ensure the README is updated with any interface or architecture changes.
 
 ## Maintainers
-Congurator is maintained by [gopaddle.io](https://gopaddle.io) team.
+Configurator is maintained by [gopaddle.io](https://gopaddle.io) team.
