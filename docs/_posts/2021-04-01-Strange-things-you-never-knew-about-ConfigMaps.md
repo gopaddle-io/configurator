@@ -27,9 +27,7 @@ ConfigMaps are Kubernetes resources that are used to store application configura
 
 Here is an example of how ConfigMaps are defined and referenced inside a deployment specification.
 
-![](https://i1.wp.com/blog.gopaddle.io/wp-content/uploads/2021/03/configmaps.png?resize=512%2C239&ssl=1)
-
-![](https://i1.wp.com/blog.gopaddle.io/wp-content/uploads/2021/03/configmaps.png?resize=512%2C239&ssl=1)
+![](https://blog.gopaddle.io/wp-content/uploads/2024/01/configmaps.png?resize=512%2C239&ssl=1)
 
 Example of defining and using ConfigMaps inside deployment specifications
 
