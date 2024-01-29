@@ -1,0 +1,36 @@
+domain: configurator.gopaddle.io
+layout:
+- go.kubebuilder.io/v3
+multigroup: true
+projectName: configurator
+repo: github.com/gopaddle-io/configurator
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: configurator.gopaddle.io
+  group: configurator.gopaddle.io
+  kind: CustomConfigMap
+  path: github.com/gopaddle-io/configurator/apis/configurator.gopaddle.io/v1alpha1
+  version: v1alpha1
+- controller: true
+  group: core
+  kind: ConfigMap
+  path: k8s.io/api/core/v1
+  version: v1
+- controller: true
+  group: core
+  kind: Secret
+  path: k8s.io/api/core/v1
+  version: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: configurator.gopaddle.io
+  group: configurator.gopaddle.io
+  kind: CustomSecret
+  path: github.com/gopaddle-io/configurator/apis/configurator.gopaddle.io/v1alpha1
+  version: v1alpha1
+version: "3"

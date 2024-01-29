@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: service-nginx
+  template:
+    metadata:
+      labels:
+        app: service-nginx
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.14
+          ports:
+            - containerPort: 80
+          volumeMounts:
+           - name: nginx
+             mountPath: "/config"
+             readOnly: true
+      volumes:
+      - name: nginx
+        configMap:
+          name: demo-config

@@ -1,0 +1,7 @@
+apiVersion: configurator.gopaddle.io/v1alpha1
+kind: CustomConfigMap
+metadata:
+  name: customconfigmap-sample
+spec:
+  # Add fields here
+  foo: bar
